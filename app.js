@@ -271,14 +271,13 @@ function saveAdhkar() {
 }
 
 // ================= NAVIGATION =================
-const SECTIONS = ['overview', 'adhkar', 'misbaha', 'add', 'categories', 'backup'];
+const SECTIONS = ['overview', 'adhkar', 'misbaha', 'add', 'categories'];
 const SECTION_TITLES = {
   overview: 'نظرة عامة',
   adhkar: 'متون الأذكار',
   misbaha: 'المسبحة الإلكترونية',
   add: 'إضافة وتوثيق ذكر',
-  categories: 'أنواع وتصنيفات الأذكار',
-  backup: 'النسخ والبيانات'
+  categories: 'أنواع وتصنيفات الأذكار'
 };
 
 function navigateTo(viewName, options = {}) {
