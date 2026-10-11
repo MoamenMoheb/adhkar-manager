@@ -737,7 +737,7 @@ function renderAdhkarList() {
 
     // Search query filter
     if (currentSearchQuery) {
-      const q = currentSearchQuery;
+      const q = currentSearchQuery.toLowerCase();
       const titleMatch = (item.adminTitle || '').toLowerCase().includes(q);
       const textMatch = (item.text || '').toLowerCase().includes(q);
       const virtueMatch = (item.virtue || '').toLowerCase().includes(q);
@@ -762,7 +762,10 @@ function renderAdhkarList() {
   });
 
   // Update visible counter
-  document.getElementById('adhkarVisibleCount').innerText = `عرض ${filtered.length} من أصل ${adhkar.length} ذكراً`;
+  const counterEl = document.getElementById('adhkarVisibleCount');
+  if (counterEl) {
+    counterEl.innerText = `عرض ${filtered.length} من أصل ${adhkar.length} ذكراً`;
+  }
 
   if (filtered.length === 0) {
     emptyState.classList.remove('hidden');
@@ -771,50 +774,58 @@ function renderAdhkarList() {
     emptyState.classList.add('hidden');
   }
 
-  // Render cards
-  filtered.forEach(item => {
-    const cardEl = createDhikrCardElement(item);
+  // Render cards with clear visual hierarchy and numbering
+  filtered.forEach((item, index) => {
+    const cardEl = createDhikrCardElement(item, index, filtered.length);
     container.appendChild(cardEl);
   });
 }
 
-function createDhikrCardElement(item) {
-  const cat = categories.find(c => c.id === item.category) || { name: 'عام' };
+function createDhikrCardElement(item, index, total) {
+  const cat = categories.find(c => c.id === item.category) || { name: 'عام', color: '#006a61' };
   const hadiths = item.hadiths || [];
   const hasHadith = hadiths.length > 0;
   const currentCount = activeDhikrCounterState[item.id] || 0;
+  const num = (typeof index === 'number') ? index + 1 : 1;
 
   const card = document.createElement('div');
-  card.className = 'dhikr-item bg-surface-container-lowest rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all border border-surface-container-high/40 relative overflow-hidden space-y-3';
+  card.className = 'dhikr-item bg-surface-container-lowest rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-all border-2 border-surface-container-high/80 hover:border-primary/50 relative overflow-hidden space-y-4';
   card.id = `dhikrCard-${item.id}`;
 
-  // Top Meta Bar
+  // Top Meta Header Bar: Distinct badge with numbering, category, repeats, and action buttons
   let metaHtml = `
-    <div class="flex items-start justify-between gap-3">
+    <div class="flex items-center justify-between gap-3 flex-wrap border-b border-surface-container-high/60 pb-3.5">
       <div class="flex flex-wrap items-center gap-2">
-        <span class="bg-secondary-container/40 text-on-secondary-container text-xs px-2.5 py-0.5 rounded-full font-semibold">
-          ${cat.name}
+        <span class="bg-primary/10 text-primary text-xs px-3 py-1 rounded-xl font-bold font-mono">
+          الذكر #${num}
         </span>
-        <button onclick="handleDhikrCounterClick('${item.id}', ${item.repeats})" class="bg-surface-container hover:bg-primary hover:text-white text-on-surface-variant text-xs px-2.5 py-0.5 rounded-full flex items-center gap-1 font-semibold transition-all cursor-pointer" title="انقر للعد">
-          <span class="material-symbols-outlined text-[14px]">replay</span>
-          <span id="counterBadge-${item.id}">${item.repeats} مرات (المنجز: ${currentCount})</span>
+        <span class="bg-secondary-container/50 text-on-secondary-container text-xs px-3 py-1 rounded-xl font-bold flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full" style="background-color: ${cat.color || '#006a61'};"></span>
+          <span>${escapeHtml(cat.name)}</span>
+        </span>
+        <button onclick="handleDhikrCounterClick('${item.id}', ${item.repeats})" class="bg-surface-container hover:bg-primary hover:text-white text-on-surface-variant text-xs px-3 py-1 rounded-xl flex items-center gap-1.5 font-bold transition-all cursor-pointer shadow-2xs" title="انقر للعد المباشر">
+          <span class="material-symbols-outlined text-[15px]">replay</span>
+          <span id="counterBadge-${item.id}">${item.repeats} مرات (أُنجز: ${currentCount})</span>
         </button>
         ${item.status === 'active' 
-          ? `<span class="bg-primary-fixed text-on-primary-fixed-variant text-[11px] px-2 py-0.5 rounded-full font-medium">نشط</span>`
-          : `<span class="bg-surface-container text-outline text-[11px] px-2 py-0.5 rounded-full font-medium">مسودة</span>`
+          ? `<span class="bg-primary-fixed/80 text-on-primary-fixed-variant text-[11px] px-2.5 py-0.5 rounded-lg font-bold">معتمد</span>`
+          : `<span class="bg-surface-container text-outline text-[11px] px-2.5 py-0.5 rounded-lg font-medium">مسودة</span>`
         }
       </div>
 
-      <!-- Card Top Dropdown / Action Buttons -->
+      <!-- Action Icons (Top-Left) -->
       <div class="flex items-center gap-1">
-        <button onclick="openDetailModal('${item.id}')" title="عرض التفاصيل الكاملة" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-secondary hover:bg-surface-container transition-colors">
-          <span class="material-symbols-outlined text-[18px]">visibility</span>
+        <button onclick="openDetailModal('${item.id}')" title="عرض التفاصيل الكاملة والأحاديث" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-secondary hover:bg-surface-container transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[19px]">visibility</span>
         </button>
-        <button onclick="editDhikr('${item.id}')" title="تعديل الذكر" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-primary hover:bg-surface-container transition-colors">
-          <span class="material-symbols-outlined text-[18px]">edit</span>
+        <button onclick="copyDhikrWithSanad('${item.id}')" title="نسخ الذكر مع التخريج" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-primary hover:bg-surface-container transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[19px]">content_copy</span>
         </button>
-        <button onclick="confirmDeleteDhikr('${item.id}')" title="حذف الذكر" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-error hover:bg-error-container/30 transition-colors">
-          <span class="material-symbols-outlined text-[18px]">delete</span>
+        <button onclick="editDhikr('${item.id}')" title="تعديل الذكر" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-primary hover:bg-surface-container transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[19px]">edit</span>
+        </button>
+        <button onclick="confirmDeleteDhikr('${item.id}')" title="حذف الذكر" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-error hover:bg-error-container/30 transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[19px]">delete</span>
         </button>
       </div>
     </div>
@@ -824,71 +835,76 @@ function createDhikrCardElement(item) {
   let titleHtml = '';
   if (item.adminTitle) {
     titleHtml = `
-      <div class="text-xs font-bold text-primary flex items-center gap-1.5">
-        <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
-        <span>${item.adminTitle}</span>
+      <div class="pt-0.5">
+        <h3 class="font-headline font-bold text-sm sm:text-base text-primary flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px] text-secondary">bookmark</span>
+          <span>${escapeHtml(item.adminTitle)}</span>
+        </h3>
       </div>
     `;
   }
 
-  // Devotional Dhikr Arabic Text Box
+  // The Sacred Dhikr Calligraphy Frame (Unmistakable Hero Centerpiece)
   let dhikrBoxHtml = `
-    <div class="p-3.5 sm:p-4 bg-surface-container-low/60 rounded-xl border border-surface-container-high/30">
-      <p class="font-dhikr text-base sm:text-lg text-on-surface font-medium leading-loose select-text text-right" dir="rtl">
+    <div class="relative p-5 sm:p-6 bg-gradient-to-r from-surface-container-low/90 to-surface-container-low/40 rounded-2xl border-r-4 border-r-primary border border-surface-container-high/70 shadow-2xs">
+      <div class="absolute top-2 left-3 opacity-15 pointer-events-none select-none">
+        <span class="material-symbols-outlined text-[36px] text-primary">auto_stories</span>
+      </div>
+      <p class="font-dhikr text-lg sm:text-2xl text-on-surface font-semibold leading-loose select-text text-right" dir="rtl">
         ${item.text}
       </p>
     </div>
   `;
 
-  // Virtue snippet if present
+  // Virtue Callout (Amber/Emerald Banner)
   let virtueHtml = '';
   if (item.virtue) {
     virtueHtml = `
-      <div class="text-xs text-on-surface-variant bg-surface-container-lowest p-2.5 rounded-xl border border-surface-container-high/40 flex items-start gap-2">
-        <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">auto_awesome</span>
-        <div>
-          <span class="font-semibold text-primary">فضل الذكر:</span>
-          <span>${item.virtue}</span>
+      <div class="text-xs sm:text-sm text-on-surface-variant bg-amber-500/10 dark:bg-amber-400/10 p-3 sm:p-3.5 rounded-xl border border-amber-500/20 flex items-start gap-2.5">
+        <span class="material-symbols-outlined text-[18px] text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">auto_awesome</span>
+        <div class="leading-relaxed">
+          <span class="font-bold text-on-surface">فضل هذا الذكر: </span>
+          <span>${escapeHtml(item.virtue)}</span>
         </div>
       </div>
     `;
   }
 
-  // Hadiths Documentation Block
+  // Hadiths Documentation Sub-Panel (Strictly separated and structured)
   let hadithSectionHtml = '';
   if (hasHadith) {
     const hadithCardsHtml = hadiths.map((h, i) => {
       const sources = getHadithSources(h);
       const sourcesBadgesHtml = sources.length > 0
         ? sources.map(s => `
-            <div class="inline-flex items-center gap-1.5 bg-surface-container px-2 py-0.5 rounded-lg text-[11px] border border-surface-container-high/60">
-              <span class="font-bold text-secondary">${escapeHtml(s.book || 'مصدر معتمد')}</span>
-              ${s.number ? `<span class="bg-secondary/15 text-secondary px-1.5 py-0.2 rounded font-mono font-bold text-[10px]">#${escapeHtml(s.number)}</span>` : ''}
+            <div class="inline-flex items-center gap-1.5 bg-surface-container-lowest px-2.5 py-1 rounded-lg text-xs border border-surface-container-high/80 font-bold">
+              <span class="material-symbols-outlined text-[15px] text-secondary">menu_book</span>
+              <span class="text-on-surface">${escapeHtml(s.book || 'مصدر معتمد')}</span>
+              ${s.number ? `<span class="bg-secondary/15 text-secondary px-2 py-0.5 rounded font-mono font-bold text-[11px]">#${escapeHtml(s.number)}</span>` : ''}
             </div>
           `).join(' ')
-        : `<span class="font-semibold text-secondary text-xs">مصدر معتمد</span>`;
+        : `<span class="font-bold text-secondary text-xs">مصدر معتمد</span>`;
 
       return `
-        <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-container-high/60 flex flex-col gap-1.5">
-          <div class="flex items-center gap-1.5 text-on-surface flex-wrap text-xs">
-            <span class="material-symbols-outlined text-[17px] text-secondary">menu_book</span>
+        <div class="bg-surface-container-lowest p-3.5 rounded-xl border border-surface-container-high/60 space-y-2">
+          <div class="flex items-center gap-2 flex-wrap">
             ${sourcesBadgesHtml}
           </div>
-          ${h.text ? `<p class="text-xs text-on-surface-variant font-body line-clamp-2 mt-0.5 italic">"${escapeHtml(h.text)}"</p>` : ''}
+          ${h.text ? `<p class="text-xs text-on-surface font-body leading-relaxed p-2.5 rounded-lg bg-surface-container-low/50 border border-surface-container-high/40 italic">"${escapeHtml(h.text)}"</p>` : ''}
         </div>
       `;
     }).join('');
 
     hadithSectionHtml = `
-      <div class="bg-surface-container-low p-3 rounded-xl space-y-2">
+      <div class="bg-surface-container-low/70 p-4 rounded-2xl border border-surface-container-high/70 space-y-3">
         <div class="flex items-center justify-between text-xs">
           <span class="font-bold text-secondary flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[18px]">history_edu</span>
-            <span>التوثيق بالأحاديث النبوية (${hadiths.length})</span>
+            <span class="material-symbols-outlined text-[18px]">verified</span>
+            <span>الأحاديث النبوية المسندة والتخريج (${hadiths.length})</span>
           </span>
-          <button onclick="copyDhikrWithSanad('${item.id}')" class="text-[11px] text-primary hover:underline flex items-center gap-1">
-            <span class="material-symbols-outlined text-[13px]">content_copy</span>
-            <span>نسخ الذكر مع التخريج</span>
+          <button onclick="openDetailModal('${item.id}')" class="text-xs text-primary hover:underline font-bold flex items-center gap-1 cursor-pointer">
+            <span>عرض التخريج الكامل</span>
+            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
           </button>
         </div>
         <div class="space-y-2">
@@ -897,9 +913,8 @@ function createDhikrCardElement(item) {
       </div>
     `;
   } else {
-    // Missing Hadith Notice Box
     hadithSectionHtml = `
-      <div class="bg-tertiary-fixed/30 text-on-tertiary-container p-3 rounded-xl flex items-center justify-between gap-2 text-xs">
+      <div class="bg-tertiary-fixed/30 text-on-tertiary-container p-3.5 rounded-xl flex items-center justify-between gap-2 text-xs border border-tertiary/20">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[18px] text-on-tertiary-container shrink-0">warning_amber</span>
           <span>هذا الذكر غير موثق بحديث مسند حتى الآن</span>
@@ -911,23 +926,29 @@ function createDhikrCardElement(item) {
     `;
   }
 
-  // Footer Actions Row
+  // Footer Action Row: Direct Misbaha launcher & Details
   let footerHtml = `
-    <div class="flex items-center justify-between pt-1 border-t border-surface-container-high/40 text-xs">
+    <div class="flex items-center justify-between pt-2 border-t border-surface-container-high/60 text-xs flex-wrap gap-2">
       <div class="flex items-center gap-2">
-        <button onclick="copyText('${escapeQuote(item.text)}')" class="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface flex items-center gap-1 text-[11px] font-medium transition-colors">
-          <span class="material-symbols-outlined text-[14px]">content_copy</span>
-          <span>نسخ المتن</span>
+        <button onclick="startSingleDhikrMisbaha('${item.id}')" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-primary to-secondary text-white hover:opacity-95 font-bold flex items-center gap-1.5 shadow-xs transition-all active:scale-95 cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">touch_app</span>
+          <span>فتح بالمسبحة</span>
         </button>
-        <button onclick="handleDhikrCounterClick('${item.id}', ${item.repeats})" class="px-3 py-1.5 rounded-lg bg-primary-fixed text-primary hover:bg-primary-fixed-dim flex items-center gap-1 text-[11px] font-semibold transition-colors">
-          <span class="material-symbols-outlined text-[14px]">touch_app</span>
+        <button onclick="handleDhikrCounterClick('${item.id}', ${item.repeats})" class="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" title="انقر لتسجيل تكرار">
+          <span class="material-symbols-outlined text-[15px] text-primary">replay</span>
           <span>تسبيح (${currentCount}/${item.repeats})</span>
         </button>
       </div>
-      <button onclick="openDetailModal('${item.id}')" class="text-xs text-primary font-semibold hover:underline flex items-center gap-1">
-        <span>عرض البطاقة</span>
-        <span class="material-symbols-outlined text-[14px]">chevron_left</span>
-      </button>
+      <div class="flex items-center gap-2">
+        <button onclick="copyDhikrWithSanad('${item.id}')" class="text-xs text-on-surface-variant hover:text-primary flex items-center gap-1 px-2.5 py-1 rounded-lg hover:bg-surface-container transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[15px]">content_copy</span>
+          <span>نسخ مع السند</span>
+        </button>
+        <button onclick="openDetailModal('${item.id}')" class="text-xs text-primary font-bold hover:underline flex items-center gap-0.5 cursor-pointer">
+          <span>التفاصيل</span>
+          <span class="material-symbols-outlined text-[15px]">chevron_left</span>
+        </button>
+      </div>
     </div>
   `;
 
@@ -1393,37 +1414,45 @@ function renderCategoriesGrid() {
   categories.forEach(cat => {
     const count = adhkar.filter(d => d.category === cat.id).length;
     const card = document.createElement('div');
-    card.className = 'bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-surface-container-high/40 flex flex-col justify-between gap-3 hover:shadow-md transition-all';
+    card.className = 'group bg-surface-container-lowest p-5 rounded-2xl shadow-sm border-2 border-surface-container-high/60 hover:border-primary hover:shadow-lg hover:-translate-y-1 flex flex-col justify-between gap-3.5 transition-all cursor-pointer relative overflow-hidden';
+
+    // Clicking anywhere on the category card opens adhkar filtered by this category
+    card.onclick = (e) => {
+      if (e.target.closest('button')) return;
+      currentCategoryFilter = cat.id;
+      navigateTo('adhkar');
+    };
 
     card.innerHTML = `
-      <div class="space-y-2">
+      <div class="space-y-2.5">
         <div class="flex items-center justify-between">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white" style="background-color: ${cat.color || '#006a61'};">
-            <span class="material-symbols-outlined text-[22px]">${cat.icon || 'bookmark'}</span>
+          <div class="w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform" style="background-color: ${cat.color || '#006a61'};">
+            <span class="material-symbols-outlined text-[24px]">${cat.icon || 'bookmark'}</span>
           </div>
-          <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-container text-on-surface">
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-surface-container text-on-surface group-hover:bg-primary group-hover:text-white transition-colors">
             ${count} ذكر
           </span>
         </div>
-        <h3 class="font-headline font-bold text-base text-on-surface">${cat.name}</h3>
-        <p class="text-xs text-on-surface-variant">${cat.desc || 'تصنيف معتمد للأوراد النبوية'}</p>
+        <h3 class="font-headline font-bold text-base text-on-surface group-hover:text-primary transition-colors flex items-center justify-between">
+          <span>${escapeHtml(cat.name)}</span>
+          <span class="material-symbols-outlined text-[18px] text-outline opacity-0 group-hover:opacity-100 transition-opacity">arrow_back</span>
+        </h3>
+        <p class="text-xs text-on-surface-variant leading-relaxed">${escapeHtml(cat.desc || 'تصنيف معتمد للأوراد النبوية')}</p>
       </div>
 
-      <div class="flex items-center justify-between pt-2 border-t border-surface-container-high/40 text-xs">
-        <button onclick="currentCategoryFilter = '${cat.id}'; navigateTo('adhkar');" class="text-primary font-semibold hover:underline flex items-center gap-1">
-          <span>استعراض الأذكار</span>
-          <span class="material-symbols-outlined text-[14px]">chevron_left</span>
-        </button>
+      <div class="flex items-center justify-between pt-3 border-t border-surface-container-high/50 text-xs">
+        <span class="text-primary font-bold group-hover:underline flex items-center gap-1">
+          <span>استعراض الأذكار (${count})</span>
+          <span class="material-symbols-outlined text-[15px] group-hover:-translate-x-1 transition-transform">chevron_left</span>
+        </span>
         <div class="flex items-center gap-2">
-          <button onclick="startMisbaha('${cat.id}')" class="px-2.5 py-1 rounded-lg bg-primary-fixed text-primary hover:bg-primary-fixed-dim font-bold flex items-center gap-1 shadow-xs transition-colors">
-            <span class="material-symbols-outlined text-[14px]">touch_app</span>
-            <span>بدء بالمسبحة</span>
+          <button type="button" onclick="event.stopPropagation(); startMisbaha('${cat.id}')" class="px-3 py-1.5 rounded-lg bg-primary-fixed text-primary hover:bg-primary hover:text-white font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer" title="بدء أذكار هذا النوع بالمسبحة">
+            <span class="material-symbols-outlined text-[15px]">touch_app</span>
+            <span>المسبحة</span>
           </button>
           ${count === 0 ? `
-            <button onclick="deleteCategory('${cat.id}')" class="text-error hover:underline text-[11px]">حذف</button>
-          ` : `
-            <span class="text-[11px] text-outline">مفهرس</span>
-          `}
+            <button type="button" onclick="event.stopPropagation(); deleteCategory('${cat.id}')" class="text-error hover:underline text-[11px] p-1">حذف</button>
+          ` : ''}
         </div>
       </div>
     `;
@@ -2443,8 +2472,44 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+// ================= THEME TOGGLE (DARK / LIGHT) =================
+function initTheme() {
+  const isDark = document.documentElement.classList.contains('dark');
+  updateThemeIcon(isDark);
+}
+
+function updateThemeIcon(isDark) {
+  const icon = document.getElementById('themeToggleIcon');
+  if (icon) {
+    icon.innerText = isDark ? 'light_mode' : 'dark_mode';
+  }
+}
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.classList.toggle('dark');
+  try {
+    localStorage.setItem('adhkar_theme', isDark ? 'dark' : 'light');
+  } catch(e) {}
+  updateThemeIcon(isDark);
+  showToast(isDark ? 'تم تفعيل المظهر الداكن 🌙' : 'تم تفعيل المظهر الفاتح ☀️', isDark ? 'dark_mode' : 'light_mode');
+}
+
+// Start misbaha for a specific single dhikr
+function startSingleDhikrMisbaha(dhikrId) {
+  const item = adhkar.find(d => d.id === dhikrId);
+  if (!item) return;
+  misbahaDhikrList = [item];
+  misbahaCurrentIndex = 0;
+  misbahaCurrentCount = 0;
+  misbahaSessionTotalTaps = 0;
+  navigateTo('misbaha');
+  renderMisbahaActiveDhikr();
+}
+
 // ================= INITIAL RUN =================
 document.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
   initStorage();
   updateSyncButtonVisual();
 
