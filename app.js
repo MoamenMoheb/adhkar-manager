@@ -245,10 +245,11 @@ function saveAdhkar() {
 }
 
 // ================= NAVIGATION =================
-const SECTIONS = ['overview', 'adhkar', 'add', 'categories', 'backup'];
+const SECTIONS = ['overview', 'adhkar', 'misbaha', 'add', 'categories', 'backup'];
 const SECTION_TITLES = {
   overview: 'نظرة عامة',
   adhkar: 'متون الأذكار',
+  misbaha: 'المسبحة الإلكترونية',
   add: 'إضافة وتوثيق ذكر',
   categories: 'أنواع وتصنيفات الأذكار',
   backup: 'النسخ والبيانات'
@@ -293,6 +294,8 @@ function navigateTo(viewName, options = {}) {
     renderOverview();
   } else if (viewName === 'adhkar') {
     renderAdhkarList();
+  } else if (viewName === 'misbaha') {
+    initMisbahaSession(options.categoryId || misbahaCategoryId);
   } else if (viewName === 'categories') {
     renderCategoriesGrid();
   } else if (viewName === 'add') {
@@ -384,6 +387,13 @@ function renderOverview() {
       </div>
       <div class="w-full h-1.5 rounded-full bg-surface-variant overflow-hidden">
         <div class="h-full rounded-full transition-all" style="width: ${catPercent}%; background-color: ${color};"></div>
+      </div>
+      <div class="flex items-center justify-between pt-1 text-[11px]">
+        <span class="text-primary hover:underline">عرض القائمة</span>
+        <button onclick="event.stopPropagation(); startMisbaha('${cat.id}')" class="text-secondary font-bold hover:underline flex items-center gap-0.5">
+          <span class="material-symbols-outlined text-[14px]">touch_app</span>
+          <span>بدء بالمسبحة</span>
+        </button>
       </div>
     `;
     cardsGrid.appendChild(card);
@@ -1220,11 +1230,17 @@ function renderCategoriesGrid() {
           <span>استعراض الأذكار</span>
           <span class="material-symbols-outlined text-[14px]">chevron_left</span>
         </button>
-        ${count === 0 ? `
-          <button onclick="deleteCategory('${cat.id}')" class="text-error hover:underline text-[11px]">حذف التصنيف</button>
-        ` : `
-          <span class="text-[11px] text-outline">مفهرس</span>
-        `}
+        <div class="flex items-center gap-2">
+          <button onclick="startMisbaha('${cat.id}')" class="px-2.5 py-1 rounded-lg bg-primary-fixed text-primary hover:bg-primary-fixed-dim font-bold flex items-center gap-1 shadow-xs transition-colors">
+            <span class="material-symbols-outlined text-[14px]">touch_app</span>
+            <span>بدء بالمسبحة</span>
+          </button>
+          ${count === 0 ? `
+            <button onclick="deleteCategory('${cat.id}')" class="text-error hover:underline text-[11px]">حذف</button>
+          ` : `
+            <span class="text-[11px] text-outline">مفهرس</span>
+          `}
+        </div>
       </div>
     `;
 
@@ -1509,6 +1525,357 @@ function escapeHtml(str) {
 function escapeQuote(str) {
   return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
+
+// ================= DIGITAL MISBAHA (المسبحة الإلكترونية التفاعلية) =================
+let misbahaCategoryId = 'morning_evening';
+let misbahaDhikrList = [];
+let misbahaCurrentIndex = 0;
+let misbahaCurrentCount = 0;
+let misbahaSessionTotalTaps = 0;
+let misbahaSoundEnabled = true;
+let misbahaVibrateEnabled = true;
+let misbahaIsTransitioning = false;
+let audioCtx = null;
+
+function startMisbaha(categoryId) {
+  misbahaCategoryId = categoryId || categories[0]?.id || 'morning_evening';
+  navigateTo('misbaha', { categoryId: misbahaCategoryId });
+}
+
+function initMisbahaSession(catId) {
+  if (catId) misbahaCategoryId = catId;
+  
+  // Populate Category Select Dropdown
+  const select = document.getElementById('misbahaCategorySelect');
+  if (select) {
+    select.innerHTML = '';
+    categories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat.id;
+      const count = adhkar.filter(d => d.category === cat.id && d.status === 'active').length;
+      opt.innerText = `${cat.name} (${count} ذكر)`;
+      if (cat.id === misbahaCategoryId) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  // Filter adhkar for this category
+  misbahaDhikrList = adhkar.filter(d => d.category === misbahaCategoryId && d.status === 'active');
+  misbahaCurrentIndex = 0;
+  misbahaCurrentCount = 0;
+  misbahaSessionTotalTaps = 0;
+  misbahaIsTransitioning = false;
+
+  renderMisbahaUI();
+}
+
+function handleMisbahaCategoryChange(newCatId) {
+  misbahaCategoryId = newCatId;
+  initMisbahaSession(newCatId);
+}
+
+function renderMisbahaUI() {
+  const emptyCard = document.getElementById('misbahaEmptyCard');
+  const activeCard = document.getElementById('misbahaActiveCard');
+  const compCard = document.getElementById('misbahaCompletionCard');
+
+  if (!activeCard) return;
+
+  if (compCard) compCard.classList.add('hidden');
+
+  if (misbahaDhikrList.length === 0) {
+    if (emptyCard) emptyCard.classList.remove('hidden');
+    activeCard.classList.add('hidden');
+    return;
+  }
+
+  if (emptyCard) emptyCard.classList.add('hidden');
+  activeCard.classList.remove('hidden');
+
+  renderMisbahaActiveDhikr();
+}
+
+function renderMisbahaActiveDhikr() {
+  if (misbahaCurrentIndex >= misbahaDhikrList.length) {
+    showMisbahaCompletion();
+    return;
+  }
+
+  const currentDhikr = misbahaDhikrList[misbahaCurrentIndex];
+  const cat = categories.find(c => c.id === misbahaCategoryId) || { name: 'الأذكار' };
+
+  // Category Progress Bar & Label
+  const progLabel = document.getElementById('misbahaCategoryProgressLabel');
+  const progBar = document.getElementById('misbahaCategoryProgressBar');
+  if (progLabel) {
+    progLabel.innerText = `الذكر ${misbahaCurrentIndex + 1} من ${misbahaDhikrList.length}`;
+  }
+  if (progBar) {
+    const percent = Math.round(((misbahaCurrentIndex) / misbahaDhikrList.length) * 100);
+    progBar.style.width = `${Math.max(5, percent)}%`;
+  }
+
+  // Badges & Texts
+  const catBadge = document.getElementById('misbahaDhikrCatBadge');
+  const titleBadge = document.getElementById('misbahaDhikrTitleBadge');
+  const repeatsText = document.getElementById('misbahaTargetRepeatsText');
+  const dhikrText = document.getElementById('misbahaDhikrText');
+  const virtueBox = document.getElementById('misbahaVirtueBox');
+  const virtueText = document.getElementById('misbahaVirtueText');
+  const sourceBox = document.getElementById('misbahaSourceBox');
+  const sourceText = document.getElementById('misbahaSourceText');
+
+  if (catBadge) catBadge.innerText = cat.name;
+  if (titleBadge) {
+    if (currentDhikr.adminTitle) {
+      titleBadge.innerText = currentDhikr.adminTitle;
+      titleBadge.classList.remove('hidden');
+    } else {
+      titleBadge.classList.add('hidden');
+    }
+  }
+  const target = currentDhikr.repeats || 1;
+  if (repeatsText) {
+    repeatsText.innerText = `المطلوب: ${target} ${target > 2 && target < 11 ? 'مرات' : 'مرة'}`;
+  }
+  if (dhikrText) {
+    dhikrText.innerText = currentDhikr.text;
+  }
+
+  // Virtue
+  if (virtueBox && virtueText) {
+    if (currentDhikr.virtue) {
+      virtueText.innerText = currentDhikr.virtue;
+      virtueBox.classList.remove('hidden');
+    } else {
+      virtueBox.classList.add('hidden');
+    }
+  }
+
+  // Source / Hadith Reference
+  if (sourceBox && sourceText) {
+    const firstHadith = (currentDhikr.hadiths && currentDhikr.hadiths[0]) ? currentDhikr.hadiths[0] : null;
+    if (firstHadith) {
+      let str = firstHadith.book || 'مصدر معتمد';
+      if (firstHadith.number) str += ` #${firstHadith.number}`;
+      if (firstHadith.grade) str += ` (${firstHadith.grade})`;
+      sourceText.innerText = str;
+      sourceBox.classList.remove('hidden');
+    } else {
+      sourceBox.classList.add('hidden');
+    }
+  }
+
+  // Update Misbaha Counter Button
+  updateMisbahaCounterVisual();
+}
+
+function updateMisbahaCounterVisual() {
+  const currentDhikr = misbahaDhikrList[misbahaCurrentIndex];
+  if (!currentDhikr) return;
+
+  const target = currentDhikr.repeats || 1;
+  const countDisplay = document.getElementById('misbahaCurrentCountDisplay');
+  const remainingText = document.getElementById('misbahaRemainingText');
+  const progressCircle = document.getElementById('misbahaProgressCircle');
+
+  if (countDisplay) {
+    countDisplay.innerText = misbahaCurrentCount;
+  }
+
+  if (remainingText) {
+    const remaining = Math.max(0, target - misbahaCurrentCount);
+    remainingText.innerText = `باقٍ: ${remaining}`;
+  }
+
+  if (progressCircle) {
+    const circumference = 276.46; // 2 * Math.PI * 44
+    const fraction = Math.min(1, misbahaCurrentCount / target);
+    const offset = circumference * (1 - fraction);
+    progressCircle.style.strokeDashoffset = offset;
+  }
+}
+
+function handleMisbahaTap() {
+  if (misbahaIsTransitioning) return;
+  if (misbahaDhikrList.length === 0) return;
+  if (misbahaCurrentIndex >= misbahaDhikrList.length) return;
+
+  const currentDhikr = misbahaDhikrList[misbahaCurrentIndex];
+  const target = currentDhikr.repeats || 1;
+
+  misbahaCurrentCount++;
+  misbahaSessionTotalTaps++;
+
+  playMisbahaClick();
+  vibrateMisbaha(25);
+
+  // Button tactile pulse
+  const btn = document.getElementById('misbahaTapBtn');
+  if (btn) {
+    btn.classList.add('scale-95');
+    setTimeout(() => btn.classList.remove('scale-95'), 100);
+  }
+
+  updateMisbahaCounterVisual();
+
+  // Check if target is achieved
+  if (misbahaCurrentCount >= target) {
+    playMisbahaComplete();
+    vibrateMisbaha([40, 50, 80]);
+
+    if (btn) {
+      btn.classList.add('ring-4', 'ring-secondary');
+      setTimeout(() => btn.classList.remove('ring-4', 'ring-secondary'), 500);
+    }
+
+    // Check if there is a next dhikr
+    if (misbahaCurrentIndex < misbahaDhikrList.length - 1) {
+      showToast(`تم إتمام هذا الذكر المبارك (${target} مرات)! الانتقال للتالي...`, 'check_circle');
+      misbahaIsTransitioning = true;
+      setTimeout(() => {
+        misbahaCurrentIndex++;
+        misbahaCurrentCount = 0;
+        misbahaIsTransitioning = false;
+        renderMisbahaActiveDhikr();
+      }, 450);
+    } else {
+      // Completed all adhkar in this category!
+      misbahaIsTransitioning = true;
+      setTimeout(() => {
+        misbahaIsTransitioning = false;
+        showMisbahaCompletion();
+      }, 500);
+    }
+  }
+}
+
+function showMisbahaCompletion() {
+  const activeCard = document.getElementById('misbahaActiveCard');
+  const compCard = document.getElementById('misbahaCompletionCard');
+  const cat = categories.find(c => c.id === misbahaCategoryId) || { name: 'هذا القسم' };
+
+  if (activeCard) activeCard.classList.add('hidden');
+  if (compCard) {
+    compCard.classList.remove('hidden');
+    document.getElementById('misbahaCompletionTitle').innerText = `أتممت ${cat.name} كاملة!`;
+    document.getElementById('misbahaSummaryDhikrCount').innerText = `${misbahaDhikrList.length} ذكر`;
+    document.getElementById('misbahaSummaryTotalTaps').innerText = `${misbahaSessionTotalTaps} تسبيحة`;
+  }
+
+  playMisbahaComplete();
+  vibrateMisbaha([60, 60, 100, 60, 150]);
+  showToast('هنيئاً لك! أتممت جميع أذكار القسم بنجاح مبارك', 'verified');
+}
+
+function nextMisbahaDhikr() {
+  if (misbahaCurrentIndex < misbahaDhikrList.length - 1) {
+    misbahaCurrentIndex++;
+    misbahaCurrentCount = 0;
+    renderMisbahaActiveDhikr();
+  } else {
+    showMisbahaCompletion();
+  }
+}
+
+function prevMisbahaDhikr() {
+  if (misbahaCurrentIndex > 0) {
+    misbahaCurrentIndex--;
+    misbahaCurrentCount = 0;
+    renderMisbahaActiveDhikr();
+  }
+}
+
+function resetMisbahaCurrentCount() {
+  misbahaCurrentCount = 0;
+  updateMisbahaCounterVisual();
+  showToast('تمت إعادة تصفير عداد الذكر الحالي');
+}
+
+function restartCurrentMisbahaCategory() {
+  misbahaCurrentIndex = 0;
+  misbahaCurrentCount = 0;
+  misbahaSessionTotalTaps = 0;
+  renderMisbahaUI();
+}
+
+function toggleMisbahaSound() {
+  misbahaSoundEnabled = !misbahaSoundEnabled;
+  const icon = document.getElementById('misbahaAudioIcon');
+  if (icon) {
+    icon.innerText = misbahaSoundEnabled ? 'volume_up' : 'volume_off';
+  }
+  showToast(misbahaSoundEnabled ? 'تم تفعيل صوت النقر' : 'تم كتم صوت النقر');
+}
+
+function toggleMisbahaVibrate() {
+  misbahaVibrateEnabled = !misbahaVibrateEnabled;
+  const icon = document.getElementById('misbahaVibrateIcon');
+  if (icon) {
+    icon.innerText = misbahaVibrateEnabled ? 'vibration' : 'smartphone';
+  }
+  showToast(misbahaVibrateEnabled ? 'تم تفعيل الاهتزاز' : 'تم إيقاف الاهتزاز');
+}
+
+function playMisbahaClick() {
+  if (!misbahaSoundEnabled) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(850, audioCtx.currentTime + 0.04);
+    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.04);
+  } catch (e) {}
+}
+
+function playMisbahaComplete() {
+  if (!misbahaSoundEnabled) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+    [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + i * 0.07);
+      gain.gain.setValueAtTime(0.18, now + i * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.22);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + i * 0.07);
+      osc.stop(now + i * 0.07 + 0.22);
+    });
+  } catch (e) {}
+}
+
+function vibrateMisbaha(pattern) {
+  if (!misbahaVibrateEnabled) return;
+  if ('vibrate' in navigator) {
+    try {
+      navigator.vibrate(pattern);
+    } catch (e) {}
+  }
+}
+
+// Spacebar shortcut for Misbaha
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.key === ' ') {
+    const misbahaView = document.getElementById('viewMisbaha');
+    if (misbahaView && !misbahaView.classList.contains('hidden')) {
+      e.preventDefault();
+      handleMisbahaTap();
+    }
+  }
+});
 
 // ================= INITIAL RUN =================
 document.addEventListener('DOMContentLoaded', () => {
