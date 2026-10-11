@@ -27,18 +27,16 @@ const DEFAULT_ADHKAR = [
       {
         id: 'h-1-1',
         text: 'مَن قالَها مِنَ النَّهارِ مُوقِنًا بها، فَماتَ مِن يَومِهِ قَبْلَ أنْ يُمْسِيَ، فَهو مِن أهْلِ الجَنَّةِ، ومَن قالَها مِنَ اللَّيْلِ وهو مُوقِنٌ بها، فَماتَ قَبْلَ أنْ يُصْبِحَ، فَهو مِن أهْلِ الجَنَّةِ.',
-        book: 'صحيح البخاري',
-        number: '6306',
-        chapter: 'كتاب الدعوات، باب أفضل الاستغفار',
-        grade: 'صحيح'
+        sources: [
+          { book: 'صحيح البخاري', number: '6306' }
+        ]
       },
       {
         id: 'h-1-2',
         text: 'سَيِّدُ الاِسْتِغْفَارِ أَنْ يَقُولَ الْعَبْدُ: اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَهَ إِلَّا أَنْتَ...',
-        book: 'سنن الترمذي',
-        number: '3393',
-        chapter: 'أبواب الدعوات عن رسول الله صلى الله عليه وسلم',
-        grade: 'حسن صحيح'
+        sources: [
+          { book: 'سنن الترمذي', number: '3393' }
+        ]
       }
     ]
   },
@@ -55,18 +53,16 @@ const DEFAULT_ADHKAR = [
       {
         id: 'h-2-1',
         text: 'مَن قالَ: سُبْحانَ اللهِ وبِحَمْدِهِ، في يَومٍ مِائَةَ مَرَّةٍ، حُطَّتْ خَطاياهُ، وإنْ كانَتْ مِثْلَ زَبَدِ البَحْرِ.',
-        book: 'صحيح البخاري',
-        number: '6405',
-        chapter: 'كتاب الدعوات، باب فضل التسبيح',
-        grade: 'صحيح'
+        sources: [
+          { book: 'صحيح البخاري', number: '6405' }
+        ]
       },
       {
         id: 'h-2-2',
         text: 'مَن قالَ حِينَ يُصْبِحُ وَحِينَ يُمْسِي: سُبْحَانَ اللهِ وَبِحَمْدِهِ، مِئَةَ مَرَّةٍ، لَمْ يَأْتِ أَحَدٌ يَوْمَ القِيَامَةِ، بِأَفْضَلَ ممَّا جَاءَ به، إِلَّا أَحَدٌ قالَ مِثْلَ ما قالَ، أَوْ زَادَ عليه.',
-        book: 'صحيح مسلم',
-        number: '2692',
-        chapter: 'كتاب الذكر والدعاء والتوبة، باب فضل التهليل والتسبيح',
-        grade: 'صحيح'
+        sources: [
+          { book: 'صحيح مسلم', number: '2692' }
+        ]
       }
     ]
   },
@@ -83,10 +79,9 @@ const DEFAULT_ADHKAR = [
       {
         id: 'h-3-1',
         text: 'كانَ رَسولُ اللهِ صَلَّى اللَّهُ عليه وسلَّمَ، إذَا انْصَرَفَ مِن صَلَاتِهِ اسْتَغْفَرَ ثَلَاثًا، وَقالَ: اللَّهُمَّ أَنْتَ السَّلَامُ وَمِنْكَ السَّلَامُ، تَبَارَكْتَ ذَا الجَلَالِ وَالإِكْرَامِ.',
-        book: 'صحيح مسلم',
-        number: '591',
-        chapter: 'كتاب المساجد ومواضع الصلاة، باب استحباب الذكر بعد الصلاة',
-        grade: 'صحيح'
+        sources: [
+          { book: 'صحيح مسلم', number: '591' }
+        ]
       }
     ]
   },
@@ -103,10 +98,10 @@ const DEFAULT_ADHKAR = [
       {
         id: 'h-4-1',
         text: 'إِذَا أَوَى أَحَدُكُمْ إِلَى فِرَاشِهِ فَلْيَنْفُضْ فِرَاشَهُ بِدَاخِلَةِ إِزَارِهِ، فَإِنَّهُ لَا يَدْرِي مَا خَلَفَهُ عَلَيْهِ، ثُمَّ يَقُولُ: بِاسْمِكَ رَبِّي وَضَعْتُ جَنْبِي وَبِكَ أَرْفَعُهُ...',
-        book: 'صحيح البخاري',
-        number: '6320',
-        chapter: 'كتاب الدعوات، باب التعوذ والقراءة عند المنام',
-        grade: 'صحيح'
+        sources: [
+          { book: 'صحيح البخاري', number: '6320' },
+          { book: 'صحيح مسلم', number: '2714' }
+        ]
       }
     ]
   },
@@ -123,10 +118,10 @@ const DEFAULT_ADHKAR = [
       {
         id: 'h-5-1',
         text: 'ما مِن عَبْدٍ مُسْلِمٍ يَقُولُ حِينَ يُصْبِحُ وَحِينَ يُمْسِي ثَلَاثَ مَرَّاتٍ: رَضِيتُ بِاللَّهِ رَبًّا، وَبِالإِسْلَامِ دِينًا، وَبِمُحَمَّدٍ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ نَبِيًّا، إِلَّا كَانَ حَقًّا عَلَى اللَّهِ أَنْ يُرْضِيَهُ يَوْمَ القِيَامَةِ.',
-        book: 'سنن الترمذي',
-        number: '3389',
-        chapter: 'أبواب الدعوات عن رسول الله صلى الله عليه وسلم',
-        grade: 'حسن صحيح'
+        sources: [
+          { book: 'سنن الترمذي', number: '3389' },
+          { book: 'سنن أبي داود', number: '5072' }
+        ]
       }
     ]
   },
@@ -143,10 +138,10 @@ const DEFAULT_ADHKAR = [
       {
         id: 'h-6-1',
         text: 'يا عبدَ اللهِ بنَ قيسٍ، ألَا أدُلُّكَ على كَنزٍ من كُنوزِ الجَنَّةِ؟ فقلتُ: بلى يا رسولَ اللهِ، قال: قُلْ: لا حَولَ ولا قُوَّةَ إلَّا باللهِ.',
-        book: 'صحيح البخاري',
-        number: '6384',
-        chapter: 'كتاب المغازي وكتاب الدعوات',
-        grade: 'متفق عليه'
+        sources: [
+          { book: 'صحيح البخاري', number: '6384' },
+          { book: 'صحيح مسلم', number: '2704' }
+        ]
       }
     ]
   },
@@ -163,10 +158,9 @@ const DEFAULT_ADHKAR = [
       {
         id: 'h-7-1',
         text: 'أنَّ رَسولَ اللهِ صَلَّى اللَّهُ عليه وسلَّمَ كانَ إذَا اسْتَوَى علَى بَعِيرِهِ خَارِجًا إلى سَفَرٍ، كَبَّرَ ثَلَاثًا، ثُمَّ قالَ: سُبْحَانَ الذي سَخَّرَ لَنَا هذا...',
-        book: 'صحيح مسلم',
-        number: '1342',
-        chapter: 'كتاب الحج، باب ما يقول إذا ركب إلى سفر الحج وغيره',
-        grade: 'صحيح'
+        sources: [
+          { book: 'صحيح مسلم', number: '1342' }
+        ]
       }
     ]
   },
@@ -183,10 +177,9 @@ const DEFAULT_ADHKAR = [
       {
         id: 'h-8-1',
         text: 'كانَ النبيُّ صَلَّى اللهُ عليه وسلَّمَ يقولُ: اللَّهُمَّ إنِّي أعُوذُ بكَ مِنَ الهَمِّ والحَزَنِ، والعَجْزِ والكَسَلِ...',
-        book: 'صحيح البخاري',
-        number: '2893',
-        chapter: 'كتاب الجهاد والسير، باب الدعاء بالجهاد والمغفرة',
-        grade: 'صحيح'
+        sources: [
+          { book: 'صحيح البخاري', number: '2893' }
+        ]
       }
     ]
   }
@@ -203,6 +196,25 @@ let verifiedOnlyFilter = false;
 let currentSearchQuery = '';
 let activeDhikrCounterState = {};
 
+// Helper to extract normalized sources array [{ book, number }]
+function getHadithSources(h) {
+  if (!h) return [];
+  if (Array.isArray(h.sources) && h.sources.length > 0) {
+    return h.sources.filter(s => s && (s.book || s.number));
+  }
+  if (h.book || h.number) {
+    const books = (h.book || '').split(/[,،]+/).map(b => b.trim()).filter(Boolean);
+    if (books.length > 1) {
+      return books.map((b, idx) => ({
+        book: b,
+        number: idx === 0 ? (h.number || '') : ''
+      }));
+    }
+    return [{ book: h.book || '', number: h.number || '' }];
+  }
+  return [];
+}
+
 // ================= STORAGE INITIALIZATION =================
 function initStorage() {
   try {
@@ -217,6 +229,20 @@ function initStorage() {
     const savedAdhkar = localStorage.getItem(STORAGE_KEY_ADHKAR);
     if (savedAdhkar) {
       adhkar = JSON.parse(savedAdhkar);
+      // Data normalization & migration: ensure each hadith has sources array and remove grade/chapter
+      adhkar.forEach(item => {
+        if (Array.isArray(item.hadiths)) {
+          item.hadiths.forEach(h => {
+            delete h.grade;
+            delete h.chapter;
+            if (!Array.isArray(h.sources) || h.sources.length === 0) {
+              const src = getHadithSources(h);
+              h.sources = src.length > 0 ? src : [{ book: '', number: '' }];
+            }
+          });
+        }
+      });
+      localStorage.setItem(STORAGE_KEY_ADHKAR, JSON.stringify(adhkar));
     } else {
       adhkar = [...DEFAULT_ADHKAR];
       localStorage.setItem(STORAGE_KEY_ADHKAR, JSON.stringify(adhkar));
@@ -538,13 +564,15 @@ function renderAdhkarList() {
       const virtueMatch = (item.virtue || '').toLowerCase().includes(q);
 
       // Check hadiths
-      const hadithMatch = (item.hadiths || []).some(h => 
-        (h.text || '').toLowerCase().includes(q) ||
-        (h.book || '').toLowerCase().includes(q) ||
-        (h.number || '').toString().toLowerCase().includes(q) ||
-        (h.chapter || '').toLowerCase().includes(q) ||
-        (h.grade || '').toLowerCase().includes(q)
-      );
+      const hadithMatch = (item.hadiths || []).some(h => {
+        const textMatch = (h.text || '').toLowerCase().includes(q);
+        const sources = getHadithSources(h);
+        const sourcesMatch = sources.some(s => 
+          (s.book || '').toLowerCase().includes(q) ||
+          (s.number || '').toString().toLowerCase().includes(q)
+        );
+        return textMatch || sourcesMatch;
+      });
 
       if (!titleMatch && !textMatch && !virtueMatch && !hadithMatch) {
         return false;
@@ -651,29 +679,23 @@ function createDhikrCardElement(item) {
   let hadithSectionHtml = '';
   if (hasHadith) {
     const hadithCardsHtml = hadiths.map((h, i) => {
-      const bookText = (h.book || 'مصدر معتمد').trim();
-      const bookList = bookText ? bookText.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
-      const booksBadgesHtml = bookList.length > 1
-        ? bookList.map(b => `<span class="bg-secondary/10 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[11px] font-semibold">${b}</span>`).join(' ')
-        : `<span class="font-semibold">${bookText}</span>`;
+      const sources = getHadithSources(h);
+      const sourcesBadgesHtml = sources.length > 0
+        ? sources.map(s => `
+            <div class="inline-flex items-center gap-1.5 bg-surface-container px-2 py-0.5 rounded-lg text-[11px] border border-surface-container-high/60">
+              <span class="font-bold text-secondary">${escapeHtml(s.book || 'مصدر معتمد')}</span>
+              ${s.number ? `<span class="bg-secondary/15 text-secondary px-1.5 py-0.2 rounded font-mono font-bold text-[10px]">#${escapeHtml(s.number)}</span>` : ''}
+            </div>
+          `).join(' ')
+        : `<span class="font-semibold text-secondary text-xs">مصدر معتمد</span>`;
 
       return `
         <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-container-high/60 flex flex-col gap-1.5">
-          <div class="flex items-center justify-between gap-2 flex-wrap text-xs">
-            <div class="flex items-center gap-1.5 text-on-surface flex-wrap">
-              <span class="material-symbols-outlined text-[18px] text-secondary">menu_book</span>
-              ${booksBadgesHtml}
-              ${h.number ? `<span class="bg-surface-container px-2 py-0.5 rounded text-[11px] font-mono font-medium text-secondary">#${h.number}</span>` : ''}
-            </div>
-            ${h.grade && h.grade.trim() ? `
-              <span class="bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px]">verified</span>
-                <span>${h.grade}</span>
-              </span>
-            ` : ''}
+          <div class="flex items-center gap-1.5 text-on-surface flex-wrap text-xs">
+            <span class="material-symbols-outlined text-[17px] text-secondary">menu_book</span>
+            ${sourcesBadgesHtml}
           </div>
-          ${h.chapter ? `<div class="text-[11px] text-outline font-medium">الموضع: ${h.chapter}</div>` : ''}
-          ${h.text ? `<p class="text-xs text-on-surface-variant font-body line-clamp-2 mt-0.5 italic">"${h.text}"</p>` : ''}
+          ${h.text ? `<p class="text-xs text-on-surface-variant font-body line-clamp-2 mt-0.5 italic">"${escapeHtml(h.text)}"</p>` : ''}
         </div>
       `;
     }).join('');
@@ -834,10 +856,9 @@ function addEmptyHadithCard() {
   const newHadith = {
     id: `temp-h-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     text: '',
-    book: '',
-    number: '',
-    chapter: '',
-    grade: ''
+    sources: [
+      { book: '', number: '' }
+    ]
   };
   formHadiths.push(newHadith);
   renderFormHadithsList();
@@ -849,75 +870,51 @@ function removeHadithCard(tempId) {
   showToast('تمت إزالة بطاقة الحديث');
 }
 
+function addHadithSource(hadithId) {
+  syncHadithFormData();
+  const hadith = formHadiths.find(h => h.id === hadithId);
+  if (!hadith) return;
+  if (!Array.isArray(hadith.sources)) hadith.sources = [];
+  hadith.sources.push({ book: '', number: '' });
+  renderFormHadithsList();
+}
+
+function removeHadithSource(hadithId, sourceIndex) {
+  syncHadithFormData();
+  const hadith = formHadiths.find(h => h.id === hadithId);
+  if (!hadith || !Array.isArray(hadith.sources)) return;
+  hadith.sources.splice(sourceIndex, 1);
+  if (hadith.sources.length === 0) {
+    hadith.sources.push({ book: '', number: '' });
+  }
+  renderFormHadithsList();
+}
+
+function setHadithSourceBook(hadithId, sourceIndex, bookName) {
+  const input = document.getElementById(`hadithSourceBook-${hadithId}-${sourceIndex}`);
+  if (input) {
+    input.value = bookName;
+  }
+  const hadith = formHadiths.find(h => h.id === hadithId);
+  if (hadith && hadith.sources && hadith.sources[sourceIndex]) {
+    hadith.sources[sourceIndex].book = bookName;
+  }
+}
+
 function syncHadithFormData() {
   formHadiths.forEach(h => {
     const textEl = document.getElementById(`hadithText-${h.id}`);
-    const bookEl = document.getElementById(`hadithBook-${h.id}`);
-    const numEl = document.getElementById(`hadithNum-${h.id}`);
-    const gradeEl = document.getElementById(`hadithGrade-${h.id}`);
-    const chapEl = document.getElementById(`hadithChap-${h.id}`);
-
     if (textEl) h.text = textEl.value.trim();
-    if (bookEl) h.book = bookEl.value.trim();
-    if (numEl) h.number = numEl.value.trim();
-    if (gradeEl) h.grade = gradeEl.value.trim();
-    if (chapEl) h.chapter = chapEl.value.trim();
-  });
-}
 
-function toggleBookChip(hadithId, bookName) {
-  const input = document.getElementById(`hadithBook-${hadithId}`);
-  if (!input) return;
-
-  let current = input.value.trim();
-  let list = current ? current.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
-
-  const index = list.indexOf(bookName);
-  if (index >= 0) {
-    list.splice(index, 1);
-  } else {
-    list.push(bookName);
-  }
-
-  input.value = list.join('، ');
-
-  const item = formHadiths.find(h => h.id === hadithId);
-  if (item) {
-    item.book = input.value;
-  }
-
-  updateBookChipsVisual(hadithId, list);
-}
-
-function updateBookChipsVisual(hadithId, currentList) {
-  const container = document.getElementById(`bookChipsContainer-${hadithId}`);
-  if (!container) return;
-
-  const buttons = container.querySelectorAll('button[data-book]');
-  buttons.forEach(btn => {
-    const book = btn.getAttribute('data-book');
-    const isSelected = currentList.includes(book);
-    if (isSelected) {
-      btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-secondary text-white shadow-xs flex items-center gap-1 cursor-pointer';
-      btn.innerHTML = `<span class="material-symbols-outlined text-[13px]">check</span><span>${book}</span>`;
-    } else {
-      btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all bg-surface-container hover:bg-surface-container-high text-on-surface border border-surface-container-high/60 flex items-center gap-1 cursor-pointer';
-      btn.innerHTML = `<span>+</span><span>${book}</span>`;
+    if (Array.isArray(h.sources)) {
+      h.sources.forEach((s, idx) => {
+        const bookEl = document.getElementById(`hadithSourceBook-${h.id}-${idx}`);
+        const numEl = document.getElementById(`hadithSourceNum-${h.id}-${idx}`);
+        if (bookEl) s.book = bookEl.value.trim();
+        if (numEl) s.number = numEl.value.trim();
+      });
     }
   });
-}
-
-function handleBookInputManual(hadithId) {
-  const input = document.getElementById(`hadithBook-${hadithId}`);
-  if (!input) return;
-  const current = input.value.trim();
-  const list = current ? current.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
-  updateBookChipsVisual(hadithId, list);
-
-  const item = formHadiths.find(h => h.id === hadithId);
-  if (item) {
-    item.book = input.value;
-  }
 }
 
 function renderFormHadithsList() {
@@ -936,25 +933,54 @@ function renderFormHadithsList() {
     'موطأ مالك'
   ];
 
-  const grades = [
-    { value: '', label: '-- بدون تحديد (فارغة) --' },
-    { value: 'صحيح', label: 'صحيح' },
-    { value: 'حسن', label: 'حسن' },
-    { value: 'متفق عليه', label: 'متفق عليه' },
-    { value: 'حسن صحيح', label: 'حسن صحيح' },
-    { value: 'صحيح لغيره', label: 'صحيح لغيره' },
-    { value: 'حسن لغيره', label: 'حسن لغيره' },
-    { value: 'ضعيف', label: 'ضعيف' },
-    { value: 'أخرى', label: 'أخرى' }
-  ];
-
   formHadiths.forEach((h, index) => {
+    if (!Array.isArray(h.sources) || h.sources.length === 0) {
+      h.sources = [{ book: '', number: '' }];
+    }
+
     const card = document.createElement('div');
     card.className = 'hadith-card bg-surface-container-low rounded-2xl p-4 border border-surface-container-high/60 space-y-3.5';
     card.id = `formHadithCard-${h.id}`;
 
-    const currentBookText = (h.book || '').trim();
-    const currentBookList = currentBookText ? currentBookText.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
+    const sourcesHtml = h.sources.map((s, sIndex) => `
+      <div class="p-3 bg-surface-container-lowest rounded-xl border border-surface-container-high/50 space-y-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-on-surface">
+          <div class="flex items-center gap-1.5 text-secondary">
+            <span class="material-symbols-outlined text-[16px]">menu_book</span>
+            <span>الكتاب / المصدر (${sIndex + 1})</span>
+          </div>
+          ${h.sources.length > 1 ? `
+            <button type="button" onclick="removeHadithSource('${h.id}', ${sIndex})" class="text-error hover:bg-error-container/40 px-2 py-0.5 rounded text-[11px] flex items-center gap-1 transition-colors">
+              <span class="material-symbols-outlined text-[14px]">delete</span>
+              <span>حذف هذا الكتاب</span>
+            </button>
+          ` : ''}
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div class="space-y-1">
+            <label class="text-[11px] font-semibold text-on-surface">المصدر / الكتاب</label>
+            <input id="hadithSourceBook-${h.id}-${sIndex}" type="text" value="${escapeHtml(s.book || '')}" placeholder="مثال: صحيح البخاري، سنن الترمذي..." class="w-full bg-surface-container-low text-on-surface px-3 py-2 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-secondary"/>
+          </div>
+
+          <div class="space-y-1">
+            <label class="text-[11px] font-semibold text-on-surface">رقم الحديث في هذا الكتاب</label>
+            <input id="hadithSourceNum-${h.id}-${sIndex}" type="text" value="${escapeHtml(s.number || '')}" placeholder="مثال: 6306" class="w-full bg-surface-container-low text-on-surface px-3 py-2 rounded-xl text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-secondary"/>
+          </div>
+        </div>
+
+        <div class="pt-0.5">
+          <div class="text-[10px] text-on-surface-variant font-medium mb-1">اختيار سريع للكتاب:</div>
+          <div class="flex flex-wrap gap-1">
+            ${quickBooks.map(b => `
+              <button type="button" onclick="setHadithSourceBook('${h.id}', ${sIndex}, '${b}')" class="px-2 py-0.5 rounded-md text-[10px] transition-all bg-surface-container hover:bg-secondary hover:text-white text-on-surface border border-surface-container-high/60 cursor-pointer">
+                ${b}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('');
 
     card.innerHTML = `
       <div class="flex items-center justify-between border-b border-surface-container-high/50 pb-2">
@@ -964,72 +990,34 @@ function renderFormHadithsList() {
         </div>
         <button type="button" onclick="removeHadithCard('${h.id}')" class="text-xs text-error hover:bg-error-container/40 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors">
           <span class="material-symbols-outlined text-[16px]">delete</span>
-          <span>إزالة الحديث</span>
+          <span>إزالة بطاقة الحديث بالكامل</span>
         </button>
       </div>
 
       <!-- متن الحديث النبوي -->
       <div class="space-y-1">
         <label class="text-xs font-semibold text-on-surface">متن الحديث النبوي الشريف</label>
-        <textarea id="hadithText-${h.id}" rows="2" placeholder="أدخل متن الحديث النبوي المأثور بالسند أو المعنى..." class="w-full bg-surface-container-lowest text-on-surface p-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-secondary transition-all">${h.text || ''}</textarea>
+        <textarea id="hadithText-${h.id}" rows="2" placeholder="أدخل متن الحديث النبوي المأثور بالسند أو المعنى..." class="w-full bg-surface-container-lowest text-on-surface p-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-secondary transition-all">${escapeHtml(h.text || '')}</textarea>
       </div>
 
-      <!-- مصدر الحديث (كتاب أو كتابان أو أكثر) -->
-      <div class="space-y-1.5 p-3 rounded-xl bg-surface-container-lowest border border-surface-container-high/50">
+      <!-- قائمة الكتب والأرقام لهذا الحديث -->
+      <div class="space-y-2">
         <div class="flex items-center justify-between">
           <label class="text-xs font-semibold text-on-surface flex items-center gap-1">
-            <span class="material-symbols-outlined text-[16px] text-secondary">menu_book</span>
-            <span>المصدر / الكتاب (يمكن تحديد كتاب واحد، كتابان، أو أكثر)</span>
+            <span class="material-symbols-outlined text-[16px] text-secondary">collections_bookmark</span>
+            <span>المصدر / الكتاب ورقم الحديث (يمكن تحديد كتاب واحد، كتابان، أو أكثر)</span>
           </label>
-          <span class="text-[11px] text-outline">اختر بالنقر أو اكتب مباشرة</span>
+          <span class="text-[10px] text-outline">لكل كتاب رقمه الخاص المعتمد</span>
         </div>
 
-        <div class="relative">
-          <input id="hadithBook-${h.id}" type="text" value="${escapeHtml(h.book || '')}" oninput="handleBookInputManual('${h.id}')" placeholder="مثال: صحيح البخاري، صحيح مسلم أو اكتب مصدراً آخر..." class="w-full bg-surface-container-low text-on-surface px-3 py-2 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-secondary transition-all"/>
+        <div class="space-y-2">
+          ${sourcesHtml}
         </div>
 
-        <div class="pt-1">
-          <div class="text-[11px] text-on-surface-variant font-medium mb-1">الكتب المعتمدة (انقر لتحديد أو إزالة الكتاب):</div>
-          <div id="bookChipsContainer-${h.id}" class="flex flex-wrap gap-1.5">
-            ${quickBooks.map(b => {
-              const isSelected = currentBookList.includes(b);
-              return `
-                <button type="button" data-book="${b}" onclick="toggleBookChip('${h.id}', '${b}')" class="px-2.5 py-1 rounded-lg text-[11px] transition-all flex items-center gap-1 cursor-pointer ${
-                  isSelected 
-                    ? 'bg-secondary text-white font-bold shadow-xs' 
-                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-surface-container-high/60 font-medium'
-                }">
-                  ${isSelected ? '<span class="material-symbols-outlined text-[13px]">check</span>' : '<span>+</span>'}
-                  <span>${b}</span>
-                </button>
-              `;
-            }).join('')}
-          </div>
-        </div>
-      </div>
-
-      <!-- رقم الحديث ودرجة الصحة (اختيارية ويمكن إفراغها) -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="space-y-1">
-          <label class="text-[11px] font-semibold text-on-surface">رقم الحديث (في الطبعات المعتمدة)</label>
-          <input id="hadithNum-${h.id}" type="text" value="${h.number || ''}" placeholder="مثال: 6306، 2692" class="w-full bg-surface-container-lowest text-on-surface p-2.5 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-secondary"/>
-        </div>
-
-        <div class="space-y-1">
-          <div class="flex items-center justify-between">
-            <label class="text-[11px] font-semibold text-on-surface">درجة الصحة</label>
-            <span class="text-[10px] text-outline">(اختيارية - يمكن إفراغها)</span>
-          </div>
-          <select id="hadithGrade-${h.id}" class="w-full bg-surface-container-lowest text-on-surface p-2.5 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-secondary cursor-pointer">
-            ${grades.map(g => `<option value="${g.value}" ${g.value === (h.grade || '') ? 'selected' : ''}>${g.label}</option>`).join('')}
-          </select>
-        </div>
-      </div>
-
-      <!-- الباب أو الموضع في الكتاب -->
-      <div class="space-y-1">
-        <label class="text-[11px] font-semibold text-on-surface">الباب أو الموضع في الكتاب (أين ورد الحديث؟)</label>
-        <input id="hadithChap-${h.id}" type="text" value="${h.chapter || ''}" placeholder="مثال: كتاب الدعوات، باب أفضل الاستغفار" class="w-full bg-surface-container-lowest text-on-surface p-2.5 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-secondary"/>
+        <button type="button" onclick="addHadithSource('${h.id}')" class="w-full py-2 rounded-xl border border-dashed border-secondary/50 text-secondary bg-secondary-container/10 hover:bg-secondary-container/25 flex items-center justify-center gap-1.5 text-xs font-semibold transition-all">
+          <span class="material-symbols-outlined text-[16px]">add_circle</span>
+          <span>+ إضافة كتاب ورقم حديث آخر لهذا الحديث</span>
+        </button>
       </div>
     `;
 
@@ -1037,9 +1025,32 @@ function renderFormHadithsList() {
   });
 }
 
+function getCleanHadithsFromForm() {
+  syncHadithFormData();
+  return formHadiths
+    .filter(h => {
+      const hasText = Boolean(h.text && h.text.trim());
+      const hasSources = Array.isArray(h.sources) && h.sources.some(s => (s.book && s.book.trim()) || (s.number && s.number.trim()));
+      return hasText || hasSources;
+    })
+    .map((h, i) => {
+      const cleanSources = (h.sources || [])
+        .filter(s => (s.book && s.book.trim()) || (s.number && s.number.trim()))
+        .map(s => ({
+          book: (s.book || '').trim(),
+          number: (s.number || '').trim()
+        }));
+
+      return {
+        id: h.id.startsWith('temp') ? `h-${Date.now()}-${i}` : h.id,
+        text: (h.text || '').trim(),
+        sources: cleanSources.length > 0 ? cleanSources : [{ book: '', number: '' }]
+      };
+    });
+}
+
 function handleFormSubmit(event) {
   event.preventDefault();
-  syncHadithFormData();
 
   const editId = document.getElementById('editDhikrId').value;
   const adminTitle = document.getElementById('formAdminTitle').value.trim();
@@ -1055,15 +1066,7 @@ function handleFormSubmit(event) {
     return;
   }
 
-  // Filter hadiths with at least some content
-  const cleanHadiths = formHadiths.filter(h => h.text || h.number || h.chapter || h.book || h.grade).map((h, i) => ({
-    id: h.id.startsWith('temp') ? `h-${Date.now()}-${i}` : h.id,
-    text: h.text || '',
-    book: h.book || '',
-    number: h.number || '',
-    chapter: h.chapter || '',
-    grade: h.grade || ''
-  }));
+  const cleanHadiths = getCleanHadithsFromForm();
 
   if (editId) {
     // Updating existing dhikr
@@ -1106,8 +1109,6 @@ function handleFormSubmit(event) {
 }
 
 function submitAndAddNew() {
-  syncHadithFormData();
-
   const adminTitle = document.getElementById('formAdminTitle').value.trim();
   const dhikrText = document.getElementById('formDhikrText').value.trim();
   const category = document.getElementById('formCategorySelect').value;
@@ -1121,14 +1122,7 @@ function submitAndAddNew() {
     return;
   }
 
-  const cleanHadiths = formHadiths.filter(h => h.text || h.number || h.chapter || h.book || h.grade).map((h, i) => ({
-    id: `h-${Date.now()}-${i}`,
-    text: h.text || '',
-    book: h.book || '',
-    number: h.number || '',
-    chapter: h.chapter || '',
-    grade: h.grade || ''
-  }));
+  const cleanHadiths = getCleanHadithsFromForm();
 
   const newDhikr = {
     id: `dhikr-${Date.now()}`,
@@ -1174,7 +1168,14 @@ function editDhikr(id) {
   handleStatusToggleChange();
 
   // Load hadiths
-  formHadiths = (item.hadiths || []).map(h => ({ ...h }));
+  formHadiths = (item.hadiths || []).map(h => {
+    const sources = getHadithSources(h);
+    return {
+      id: h.id,
+      text: h.text || '',
+      sources: sources.length > 0 ? sources.map(s => ({ ...s })) : [{ book: '', number: '' }]
+    };
+  });
   if (formHadiths.length === 0) {
     addEmptyHadithCard();
   } else {
@@ -1312,29 +1313,23 @@ function openDetailModal(id) {
   let hadithsHtml = '';
   if (hadiths.length > 0) {
     hadithsHtml = hadiths.map((h, i) => {
-      const bookText = (h.book || 'مصدر معتمد').trim();
-      const bookList = bookText ? bookText.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
-      const booksBadgesHtml = bookList.length > 1
-        ? bookList.map(b => `<span class="bg-secondary/15 text-secondary border border-secondary/30 px-2.5 py-0.5 rounded-md text-xs font-semibold">${b}</span>`).join(' ')
-        : `<span>${bookText}</span>`;
+      const sources = getHadithSources(h);
+      const sourcesBadgesHtml = sources.length > 0
+        ? sources.map(s => `
+            <div class="inline-flex items-center gap-1.5 bg-surface-container-lowest text-secondary border border-secondary/25 px-2.5 py-1 rounded-lg text-xs font-semibold">
+              <span class="material-symbols-outlined text-[16px]">menu_book</span>
+              <span class="font-bold text-on-surface">${escapeHtml(s.book || 'مصدر معتمد')}</span>
+              ${s.number ? `<span class="bg-secondary/15 text-secondary px-2 py-0.5 rounded font-mono text-xs font-bold">#${escapeHtml(s.number)}</span>` : ''}
+            </div>
+          `).join(' ')
+        : `<span>مصدر معتمد</span>`;
 
       return `
         <div class="bg-surface-container-low p-4 rounded-xl border border-surface-container-high/60 space-y-2">
-          <div class="flex items-center justify-between flex-wrap gap-2 text-xs">
-            <div class="flex items-center gap-1.5 font-bold text-secondary flex-wrap">
-              <span class="material-symbols-outlined text-[18px]">menu_book</span>
-              ${booksBadgesHtml}
-              ${h.number ? `<span class="bg-surface-container px-2 py-0.5 rounded font-mono text-[11px]">#${h.number}</span>` : ''}
-            </div>
-            ${h.grade && h.grade.trim() ? `
-              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed flex items-center gap-1">
-                <span class="material-symbols-outlined text-[13px]">verified</span>
-                <span>${h.grade}</span>
-              </span>
-            ` : ''}
+          <div class="flex items-center gap-2 flex-wrap">
+            ${sourcesBadgesHtml}
           </div>
-          ${h.chapter ? `<div class="text-xs text-outline font-medium">أين ورد: ${h.chapter}</div>` : ''}
-          ${h.text ? `<p class="text-xs sm:text-sm text-on-surface font-body leading-relaxed bg-surface-container-lowest p-3 rounded-lg border border-surface-container-high/40">"${h.text}"</p>` : ''}
+          ${h.text ? `<p class="text-xs sm:text-sm text-on-surface font-body leading-relaxed bg-surface-container-lowest p-3 rounded-lg border border-surface-container-high/40">"${escapeHtml(h.text)}"</p>` : ''}
         </div>
       `;
     }).join('');
@@ -1499,13 +1494,16 @@ function copyDhikrWithSanad(dhikrId) {
   let content = item.text + '\n';
   if (item.repeats > 1) content += `[يُكرر ${item.repeats} مرات]\n`;
   if (item.hadiths && item.hadiths.length > 0) {
-    content += '\nالتخريج والمصدر:\n';
+    content += '\nالتخريج والمصادر:\n';
     item.hadiths.forEach(h => {
-      let line = `• ${h.book || 'مصدر معتمد'}`;
-      if (h.number) line += ` (#${h.number})`;
-      if (h.grade && h.grade.trim()) line += ` - درجة الصحة: ${h.grade}`;
-      content += line + '\n';
-      if (h.chapter) content += `  الموضع: ${h.chapter}\n`;
+      const sources = getHadithSources(h);
+      if (sources.length > 0) {
+        sources.forEach(s => {
+          let line = `• ${s.book || 'مصدر معتمد'}`;
+          if (s.number) line += ` (#${s.number})`;
+          content += line + '\n';
+        });
+      }
       if (h.text) content += `  متن الحديث: "${h.text}"\n`;
     });
   }
@@ -1656,11 +1654,13 @@ function renderMisbahaActiveDhikr() {
   if (sourceBox && sourceText) {
     const firstHadith = (currentDhikr.hadiths && currentDhikr.hadiths[0]) ? currentDhikr.hadiths[0] : null;
     if (firstHadith) {
-      let str = firstHadith.book || 'مصدر معتمد';
-      if (firstHadith.number) str += ` #${firstHadith.number}`;
-      if (firstHadith.grade) str += ` (${firstHadith.grade})`;
-      sourceText.innerText = str;
-      sourceBox.classList.remove('hidden');
+      const sources = getHadithSources(firstHadith);
+      if (sources.length > 0) {
+        sourceText.innerText = sources.map(s => s.number ? `${s.book} #${s.number}` : s.book).filter(Boolean).join(' • ');
+        sourceBox.classList.remove('hidden');
+      } else {
+        sourceBox.classList.add('hidden');
+      }
     } else {
       sourceBox.classList.add('hidden');
     }
