@@ -640,23 +640,33 @@ function createDhikrCardElement(item) {
   // Hadiths Documentation Block
   let hadithSectionHtml = '';
   if (hasHadith) {
-    const hadithCardsHtml = hadiths.map((h, i) => `
-      <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-container-high/60 flex flex-col gap-1.5">
-        <div class="flex items-center justify-between gap-2 flex-wrap text-xs">
-          <div class="flex items-center gap-1.5 text-on-surface font-semibold">
-            <span class="material-symbols-outlined text-[18px] text-secondary">menu_book</span>
-            <span>${h.book || 'مصدر معتمد'}</span>
-            ${h.number ? `<span class="bg-surface-container px-2 py-0.5 rounded text-[11px] font-mono font-medium text-secondary">#${h.number}</span>` : ''}
+    const hadithCardsHtml = hadiths.map((h, i) => {
+      const bookText = (h.book || 'مصدر معتمد').trim();
+      const bookList = bookText ? bookText.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
+      const booksBadgesHtml = bookList.length > 1
+        ? bookList.map(b => `<span class="bg-secondary/10 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[11px] font-semibold">${b}</span>`).join(' ')
+        : `<span class="font-semibold">${bookText}</span>`;
+
+      return `
+        <div class="bg-surface-container-lowest p-3 rounded-xl border border-surface-container-high/60 flex flex-col gap-1.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap text-xs">
+            <div class="flex items-center gap-1.5 text-on-surface flex-wrap">
+              <span class="material-symbols-outlined text-[18px] text-secondary">menu_book</span>
+              ${booksBadgesHtml}
+              ${h.number ? `<span class="bg-surface-container px-2 py-0.5 rounded text-[11px] font-mono font-medium text-secondary">#${h.number}</span>` : ''}
+            </div>
+            ${h.grade && h.grade.trim() ? `
+              <span class="bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">verified</span>
+                <span>${h.grade}</span>
+              </span>
+            ` : ''}
           </div>
-          <span class="bg-tertiary-fixed text-on-tertiary-fixed px-2 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1">
-            <span class="material-symbols-outlined text-[13px]">verified</span>
-            <span>${h.grade || 'صحيح'}</span>
-          </span>
+          ${h.chapter ? `<div class="text-[11px] text-outline font-medium">الموضع: ${h.chapter}</div>` : ''}
+          ${h.text ? `<p class="text-xs text-on-surface-variant font-body line-clamp-2 mt-0.5 italic">"${h.text}"</p>` : ''}
         </div>
-        ${h.chapter ? `<div class="text-[11px] text-outline font-medium">الموضع: ${h.chapter}</div>` : ''}
-        ${h.text ? `<p class="text-xs text-on-surface-variant font-body line-clamp-2 mt-0.5 italic">"${h.text}"</p>` : ''}
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     hadithSectionHtml = `
       <div class="bg-surface-container-low p-3 rounded-xl space-y-2">
@@ -814,10 +824,10 @@ function addEmptyHadithCard() {
   const newHadith = {
     id: `temp-h-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
     text: '',
-    book: 'صحيح البخاري',
+    book: '',
     number: '',
     chapter: '',
-    grade: 'صحيح'
+    grade: ''
   };
   formHadiths.push(newHadith);
   renderFormHadithsList();
@@ -838,11 +848,66 @@ function syncHadithFormData() {
     const chapEl = document.getElementById(`hadithChap-${h.id}`);
 
     if (textEl) h.text = textEl.value.trim();
-    if (bookEl) h.book = bookEl.value;
+    if (bookEl) h.book = bookEl.value.trim();
     if (numEl) h.number = numEl.value.trim();
-    if (gradeEl) h.grade = gradeEl.value;
+    if (gradeEl) h.grade = gradeEl.value.trim();
     if (chapEl) h.chapter = chapEl.value.trim();
   });
+}
+
+function toggleBookChip(hadithId, bookName) {
+  const input = document.getElementById(`hadithBook-${hadithId}`);
+  if (!input) return;
+
+  let current = input.value.trim();
+  let list = current ? current.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
+
+  const index = list.indexOf(bookName);
+  if (index >= 0) {
+    list.splice(index, 1);
+  } else {
+    list.push(bookName);
+  }
+
+  input.value = list.join('، ');
+
+  const item = formHadiths.find(h => h.id === hadithId);
+  if (item) {
+    item.book = input.value;
+  }
+
+  updateBookChipsVisual(hadithId, list);
+}
+
+function updateBookChipsVisual(hadithId, currentList) {
+  const container = document.getElementById(`bookChipsContainer-${hadithId}`);
+  if (!container) return;
+
+  const buttons = container.querySelectorAll('button[data-book]');
+  buttons.forEach(btn => {
+    const book = btn.getAttribute('data-book');
+    const isSelected = currentList.includes(book);
+    if (isSelected) {
+      btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all bg-secondary text-white shadow-xs flex items-center gap-1 cursor-pointer';
+      btn.innerHTML = `<span class="material-symbols-outlined text-[13px]">check</span><span>${book}</span>`;
+    } else {
+      btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all bg-surface-container hover:bg-surface-container-high text-on-surface border border-surface-container-high/60 flex items-center gap-1 cursor-pointer';
+      btn.innerHTML = `<span>+</span><span>${book}</span>`;
+    }
+  });
+}
+
+function handleBookInputManual(hadithId) {
+  const input = document.getElementById(`hadithBook-${hadithId}`);
+  if (!input) return;
+  const current = input.value.trim();
+  const list = current ? current.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
+  updateBookChipsVisual(hadithId, list);
+
+  const item = formHadiths.find(h => h.id === hadithId);
+  if (item) {
+    item.book = input.value;
+  }
 }
 
 function renderFormHadithsList() {
@@ -850,26 +915,36 @@ function renderFormHadithsList() {
   document.getElementById('formHadithCountNumber').innerText = formHadiths.length;
   container.innerHTML = '';
 
-  const commonBooks = [
+  const quickBooks = [
     'صحيح البخاري',
     'صحيح مسلم',
     'سنن أبي داود',
     'سنن الترمذي',
     'سنن النسائي',
     'سنن ابن ماجه',
-    'مسند الإمام أحمد',
-    'موطأ مالك',
-    'صحيح ابن حبان',
-    'مستدرك الحاكم',
-    'مصدر آخر'
+    'مسند أحمد',
+    'موطأ مالك'
   ];
 
-  const grades = ['صحيح', 'حسن', 'متفق عليه', 'حسن صحيح', 'ضعيف', 'أخرى'];
+  const grades = [
+    { value: '', label: '-- بدون تحديد (فارغة) --' },
+    { value: 'صحيح', label: 'صحيح' },
+    { value: 'حسن', label: 'حسن' },
+    { value: 'متفق عليه', label: 'متفق عليه' },
+    { value: 'حسن صحيح', label: 'حسن صحيح' },
+    { value: 'صحيح لغيره', label: 'صحيح لغيره' },
+    { value: 'حسن لغيره', label: 'حسن لغيره' },
+    { value: 'ضعيف', label: 'ضعيف' },
+    { value: 'أخرى', label: 'أخرى' }
+  ];
 
   formHadiths.forEach((h, index) => {
     const card = document.createElement('div');
-    card.className = 'hadith-card bg-surface-container-low rounded-2xl p-4 border border-surface-container-high/60 space-y-3';
+    card.className = 'hadith-card bg-surface-container-low rounded-2xl p-4 border border-surface-container-high/60 space-y-3.5';
     card.id = `formHadithCard-${h.id}`;
+
+    const currentBookText = (h.book || '').trim();
+    const currentBookList = currentBookText ? currentBookText.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
 
     card.innerHTML = `
       <div class="flex items-center justify-between border-b border-surface-container-high/50 pb-2">
@@ -877,7 +952,7 @@ function renderFormHadithsList() {
           <span class="w-6 h-6 rounded-full bg-secondary text-white text-xs font-bold flex items-center justify-center">${index + 1}</span>
           <span class="text-xs font-bold text-secondary">بطاقة السند والتوثيق (${index + 1})</span>
         </div>
-        <button type="button" onclick="removeHadithCard('${h.id}')" class="text-xs text-error hover:bg-error-container/40 px-2 py-1 rounded-lg flex items-center gap-1 transition-colors">
+        <button type="button" onclick="removeHadithCard('${h.id}')" class="text-xs text-error hover:bg-error-container/40 px-2.5 py-1 rounded-lg flex items-center gap-1 transition-colors">
           <span class="material-symbols-outlined text-[16px]">delete</span>
           <span>إزالة الحديث</span>
         </button>
@@ -889,24 +964,54 @@ function renderFormHadithsList() {
         <textarea id="hadithText-${h.id}" rows="2" placeholder="أدخل متن الحديث النبوي المأثور بالسند أو المعنى..." class="w-full bg-surface-container-lowest text-on-surface p-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-secondary transition-all">${h.text || ''}</textarea>
       </div>
 
-      <!-- مصدر الحديث ودرجة الصحة ورقم الحديث -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+      <!-- مصدر الحديث (كتاب أو كتابان أو أكثر) -->
+      <div class="space-y-1.5 p-3 rounded-xl bg-surface-container-lowest border border-surface-container-high/50">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-semibold text-on-surface flex items-center gap-1">
+            <span class="material-symbols-outlined text-[16px] text-secondary">menu_book</span>
+            <span>المصدر / الكتاب (يمكن تحديد كتاب واحد، كتابان، أو أكثر)</span>
+          </label>
+          <span class="text-[11px] text-outline">اختر بالنقر أو اكتب مباشرة</span>
+        </div>
+
+        <div class="relative">
+          <input id="hadithBook-${h.id}" type="text" value="${escapeHtml(h.book || '')}" oninput="handleBookInputManual('${h.id}')" placeholder="مثال: صحيح البخاري، صحيح مسلم أو اكتب مصدراً آخر..." class="w-full bg-surface-container-low text-on-surface px-3 py-2 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-secondary transition-all"/>
+        </div>
+
+        <div class="pt-1">
+          <div class="text-[11px] text-on-surface-variant font-medium mb-1">الكتب المعتمدة (انقر لتحديد أو إزالة الكتاب):</div>
+          <div id="bookChipsContainer-${h.id}" class="flex flex-wrap gap-1.5">
+            ${quickBooks.map(b => {
+              const isSelected = currentBookList.includes(b);
+              return `
+                <button type="button" data-book="${b}" onclick="toggleBookChip('${h.id}', '${b}')" class="px-2.5 py-1 rounded-lg text-[11px] transition-all flex items-center gap-1 cursor-pointer ${
+                  isSelected 
+                    ? 'bg-secondary text-white font-bold shadow-xs' 
+                    : 'bg-surface-container hover:bg-surface-container-high text-on-surface border border-surface-container-high/60 font-medium'
+                }">
+                  ${isSelected ? '<span class="material-symbols-outlined text-[13px]">check</span>' : '<span>+</span>'}
+                  <span>${b}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- رقم الحديث ودرجة الصحة (اختيارية ويمكن إفراغها) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="space-y-1">
-          <label class="text-[11px] font-semibold text-on-surface">الكتاب / المصدر</label>
-          <select id="hadithBook-${h.id}" class="w-full bg-surface-container-lowest text-on-surface p-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-secondary cursor-pointer">
-            ${commonBooks.map(b => `<option value="${b}" ${b === h.book ? 'selected' : ''}>${b}</option>`).join('')}
-          </select>
+          <label class="text-[11px] font-semibold text-on-surface">رقم الحديث (في الطبعات المعتمدة)</label>
+          <input id="hadithNum-${h.id}" type="text" value="${h.number || ''}" placeholder="مثال: 6306، 2692" class="w-full bg-surface-container-lowest text-on-surface p-2.5 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-secondary"/>
         </div>
 
         <div class="space-y-1">
-          <label class="text-[11px] font-semibold text-on-surface">رقم الحديث</label>
-          <input id="hadithNum-${h.id}" type="text" value="${h.number || ''}" placeholder="مثال: 6306" class="w-full bg-surface-container-lowest text-on-surface p-2 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-secondary"/>
-        </div>
-
-        <div class="space-y-1">
-          <label class="text-[11px] font-semibold text-on-surface">درجة الصحة</label>
-          <select id="hadithGrade-${h.id}" class="w-full bg-surface-container-lowest text-on-surface p-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-secondary cursor-pointer">
-            ${grades.map(g => `<option value="${g}" ${g === h.grade ? 'selected' : ''}>${g}</option>`).join('')}
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-semibold text-on-surface">درجة الصحة</label>
+            <span class="text-[10px] text-outline">(اختيارية - يمكن إفراغها)</span>
+          </div>
+          <select id="hadithGrade-${h.id}" class="w-full bg-surface-container-lowest text-on-surface p-2.5 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-secondary cursor-pointer">
+            ${grades.map(g => `<option value="${g.value}" ${g.value === (h.grade || '') ? 'selected' : ''}>${g.label}</option>`).join('')}
           </select>
         </div>
       </div>
@@ -914,7 +1019,7 @@ function renderFormHadithsList() {
       <!-- الباب أو الموضع في الكتاب -->
       <div class="space-y-1">
         <label class="text-[11px] font-semibold text-on-surface">الباب أو الموضع في الكتاب (أين ورد الحديث؟)</label>
-        <input id="hadithChap-${h.id}" type="text" value="${h.chapter || ''}" placeholder="مثال: كتاب الدعوات، باب أفضل الاستغفار" class="w-full bg-surface-container-lowest text-on-surface p-2 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-secondary"/>
+        <input id="hadithChap-${h.id}" type="text" value="${h.chapter || ''}" placeholder="مثال: كتاب الدعوات، باب أفضل الاستغفار" class="w-full bg-surface-container-lowest text-on-surface p-2.5 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-secondary"/>
       </div>
     `;
 
@@ -941,13 +1046,13 @@ function handleFormSubmit(event) {
   }
 
   // Filter hadiths with at least some content
-  const cleanHadiths = formHadiths.filter(h => h.text || h.number || h.chapter).map((h, i) => ({
+  const cleanHadiths = formHadiths.filter(h => h.text || h.number || h.chapter || h.book || h.grade).map((h, i) => ({
     id: h.id.startsWith('temp') ? `h-${Date.now()}-${i}` : h.id,
-    text: h.text,
-    book: h.book,
-    number: h.number,
-    chapter: h.chapter,
-    grade: h.grade
+    text: h.text || '',
+    book: h.book || '',
+    number: h.number || '',
+    chapter: h.chapter || '',
+    grade: h.grade || ''
   }));
 
   if (editId) {
@@ -1006,13 +1111,13 @@ function submitAndAddNew() {
     return;
   }
 
-  const cleanHadiths = formHadiths.filter(h => h.text || h.number || h.chapter).map((h, i) => ({
+  const cleanHadiths = formHadiths.filter(h => h.text || h.number || h.chapter || h.book || h.grade).map((h, i) => ({
     id: `h-${Date.now()}-${i}`,
-    text: h.text,
-    book: h.book,
-    number: h.number,
-    chapter: h.chapter,
-    grade: h.grade
+    text: h.text || '',
+    book: h.book || '',
+    number: h.number || '',
+    chapter: h.chapter || '',
+    grade: h.grade || ''
   }));
 
   const newDhikr = {
@@ -1190,22 +1295,33 @@ function openDetailModal(id) {
 
   let hadithsHtml = '';
   if (hadiths.length > 0) {
-    hadithsHtml = hadiths.map((h, i) => `
-      <div class="bg-surface-container-low p-4 rounded-xl border border-surface-container-high/60 space-y-2">
-        <div class="flex items-center justify-between flex-wrap gap-2 text-xs">
-          <div class="flex items-center gap-1.5 font-bold text-secondary">
-            <span class="material-symbols-outlined text-[18px]">menu_book</span>
-            <span>${h.book}</span>
-            ${h.number ? `<span class="bg-surface-container px-2 py-0.5 rounded font-mono text-[11px]">#${h.number}</span>` : ''}
+    hadithsHtml = hadiths.map((h, i) => {
+      const bookText = (h.book || 'مصدر معتمد').trim();
+      const bookList = bookText ? bookText.split(/[,،]+/).map(s => s.trim()).filter(Boolean) : [];
+      const booksBadgesHtml = bookList.length > 1
+        ? bookList.map(b => `<span class="bg-secondary/15 text-secondary border border-secondary/30 px-2.5 py-0.5 rounded-md text-xs font-semibold">${b}</span>`).join(' ')
+        : `<span>${bookText}</span>`;
+
+      return `
+        <div class="bg-surface-container-low p-4 rounded-xl border border-surface-container-high/60 space-y-2">
+          <div class="flex items-center justify-between flex-wrap gap-2 text-xs">
+            <div class="flex items-center gap-1.5 font-bold text-secondary flex-wrap">
+              <span class="material-symbols-outlined text-[18px]">menu_book</span>
+              ${booksBadgesHtml}
+              ${h.number ? `<span class="bg-surface-container px-2 py-0.5 rounded font-mono text-[11px]">#${h.number}</span>` : ''}
+            </div>
+            ${h.grade && h.grade.trim() ? `
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed flex items-center gap-1">
+                <span class="material-symbols-outlined text-[13px]">verified</span>
+                <span>${h.grade}</span>
+              </span>
+            ` : ''}
           </div>
-          <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-tertiary-fixed text-on-tertiary-fixed">
-            ${h.grade || 'صحيح'}
-          </span>
+          ${h.chapter ? `<div class="text-xs text-outline font-medium">أين ورد: ${h.chapter}</div>` : ''}
+          ${h.text ? `<p class="text-xs sm:text-sm text-on-surface font-body leading-relaxed bg-surface-container-lowest p-3 rounded-lg border border-surface-container-high/40">"${h.text}"</p>` : ''}
         </div>
-        ${h.chapter ? `<div class="text-xs text-outline font-medium">أين ورد: ${h.chapter}</div>` : ''}
-        ${h.text ? `<p class="text-xs sm:text-sm text-on-surface font-body leading-relaxed bg-surface-container-lowest p-3 rounded-lg border border-surface-container-high/40">"${h.text}"</p>` : ''}
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } else {
     hadithsHtml = `<div class="p-3 bg-surface-container-low rounded-xl text-xs text-outline text-center">لا يوجد حديث مسند مرتبط بهذا الذكر بعد.</div>`;
   }
@@ -1369,13 +1485,25 @@ function copyDhikrWithSanad(dhikrId) {
   if (item.hadiths && item.hadiths.length > 0) {
     content += '\nالتخريج والمصدر:\n';
     item.hadiths.forEach(h => {
-      content += `• ${h.book} (${h.number ? '#' + h.number : ''}) - درجة الصحة: ${h.grade}\n`;
+      let line = `• ${h.book || 'مصدر معتمد'}`;
+      if (h.number) line += ` (#${h.number})`;
+      if (h.grade && h.grade.trim()) line += ` - درجة الصحة: ${h.grade}`;
+      content += line + '\n';
       if (h.chapter) content += `  الموضع: ${h.chapter}\n`;
       if (h.text) content += `  متن الحديث: "${h.text}"\n`;
     });
   }
 
   copyText(content);
+}
+
+function escapeHtml(str) {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function escapeQuote(str) {
