@@ -1084,6 +1084,7 @@ function handleFormSubmit(event) {
       };
       saveAdhkar();
       showToast('تم تحديث الذكر وتوثيقه بنجاح المبارك!');
+      autoSyncIfConfigured();
     }
   } else {
     // Creating new dhikr
@@ -1101,6 +1102,7 @@ function handleFormSubmit(event) {
     adhkar.unshift(newDhikr);
     saveAdhkar();
     showToast('تمت إضافة الذكر وتوثيقه بنجاح تام!');
+    autoSyncIfConfigured();
   }
 
   // Navigate to list
@@ -1138,6 +1140,7 @@ function submitAndAddNew() {
   saveAdhkar();
 
   showToast('تم الحفظ بنجاح، وتجهيز نموذج لذكر جديد');
+  autoSyncIfConfigured();
   resetAddForm();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -1198,6 +1201,7 @@ function confirmDeleteDhikr(id) {
     showToast('تم حذف الذكر بنجاح');
     renderAdhkarList();
     renderOverview();
+    autoSyncIfConfigured();
   }
 }
 
@@ -1283,6 +1287,7 @@ function handleCategoryModalSubmit(event) {
   populateCategorySelect(newId);
   renderCategoriesGrid();
   renderCategoryChips();
+  autoSyncIfConfigured();
 }
 
 function deleteCategory(catId) {
@@ -1295,6 +1300,7 @@ function deleteCategory(catId) {
     showToast('تم حذف التصنيف بنجاح');
     renderCategoriesGrid();
     renderCategoryChips();
+    autoSyncIfConfigured();
   }
 }
 
@@ -1387,6 +1393,365 @@ function openDetailModal(id) {
 
 function closeDetailModal() {
   document.getElementById('detailModal').classList.add('hidden');
+}
+
+// ================= GITHUB CLOUD SYNC & CENTRALIZED JSON =================
+const STORAGE_KEY_GH_TOKEN = 'adhkar_github_token';
+const STORAGE_KEY_GH_REPO = 'adhkar_github_repo';
+const STORAGE_KEY_GH_AUTOSYNC = 'adhkar_github_autosync';
+const STORAGE_KEY_LAST_SYNC = 'adhkar_last_sync_time';
+const DEFAULT_REPO = 'MoamenMoheb/adhkar-manager';
+const DATA_FILE_PATH = 'data/adhkar_data.json';
+
+// UTF-8 safe Base64 encoder/decoder for Arabic and multibyte strings
+function utf8ToBase64(str) {
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (m, p) => String.fromCharCode('0x' + p)));
+}
+
+function base64ToUtf8(str) {
+  return decodeURIComponent(Array.prototype.map.call(atob(str), c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+}
+
+function getGitHubToken() {
+  return localStorage.getItem(STORAGE_KEY_GH_TOKEN) || '';
+}
+
+function getGitHubRepo() {
+  return localStorage.getItem(STORAGE_KEY_GH_REPO) || DEFAULT_REPO;
+}
+
+function isAutoSyncEnabled() {
+  const val = localStorage.getItem(STORAGE_KEY_GH_AUTOSYNC);
+  return val === null ? true : val === 'true';
+}
+
+function getLastSyncTime() {
+  return localStorage.getItem(STORAGE_KEY_LAST_SYNC) || '';
+}
+
+function setLastSyncTime(isoStr) {
+  localStorage.setItem(STORAGE_KEY_LAST_SYNC, isoStr);
+}
+
+// Update the visual status of sync across the UI
+function updateSyncButtonVisual() {
+  const token = getGitHubToken();
+  const dot = document.getElementById('headerSyncDot');
+  const text = document.getElementById('headerSyncText');
+  const icon = document.getElementById('headerSyncIcon');
+
+  if (token) {
+    if (dot) {
+      dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+      dot.title = 'المزامنة السحابية متصلة ومفعلة';
+    }
+    if (text) text.innerText = 'مزامنة نشطة';
+    if (icon) icon.className = 'material-symbols-outlined text-[17px] text-emerald-600';
+  } else {
+    if (dot) {
+      dot.className = 'w-2 h-2 rounded-full bg-outline';
+      dot.title = 'غير متصل';
+    }
+    if (text) text.innerText = 'مزامنة سحابية';
+    if (icon) icon.className = 'material-symbols-outlined text-[17px] text-secondary';
+  }
+}
+
+function updateSyncModalState() {
+  const token = getGitHubToken();
+  const repo = getGitHubRepo();
+  const lastSync = getLastSyncTime();
+  const autoSync = isAutoSyncEnabled();
+
+  const tokenInput = document.getElementById('githubTokenInput');
+  const repoDisplay = document.getElementById('syncRepoDisplay');
+  const autoCheckbox = document.getElementById('syncAutoCheckbox');
+  const statusDot = document.getElementById('syncStatusDot');
+  const statusTitle = document.getElementById('syncStatusTitle');
+  const statusDesc = document.getElementById('syncStatusDesc');
+  const lastTimeText = document.getElementById('syncLastTimeText');
+
+  if (tokenInput) tokenInput.value = token;
+  if (repoDisplay) repoDisplay.innerText = repo;
+  if (autoCheckbox) autoCheckbox.checked = autoSync;
+
+  if (lastTimeText) {
+    if (lastSync) {
+      const d = new Date(lastSync);
+      lastTimeText.innerText = `آخر مزامنة: ${d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}`;
+    } else {
+      lastTimeText.innerText = '';
+    }
+  }
+
+  if (token) {
+    if (statusDot) statusDot.className = 'w-3 h-3 rounded-full bg-emerald-500 shrink-0';
+    if (statusTitle) statusTitle.innerText = 'حالة الربط: متصل بنجاح ☁️';
+    if (statusDesc) statusDesc.innerText = autoSync
+      ? 'المزامنة التلقائية مفعلة فور إضافة أو تعديل أو حذف أي ذكر'
+      : 'الرمز محفوظ - المزامنة التلقائية معطلة حالياً';
+  } else {
+    if (statusDot) statusDot.className = 'w-3 h-3 rounded-full bg-outline shrink-0';
+    if (statusTitle) statusTitle.innerText = 'حالة الربط: غير متصل';
+    if (statusDesc) statusDesc.innerText = 'أدخل رمز الوصول الخاص بالمستودع لتفعيل المزامنة التلقائية';
+  }
+}
+
+// Fetch shared data from central JSON on startup for all browsers
+async function loadSharedDataFromGitHub() {
+  const repo = getGitHubRepo();
+  const urls = [
+    `https://raw.githubusercontent.com/${repo}/main/${DATA_FILE_PATH}?t=${Date.now()}`,
+    `./${DATA_FILE_PATH}?t=${Date.now()}`
+  ];
+
+  let loadedData = null;
+
+  for (const url of urls) {
+    try {
+      const resp = await fetch(url, { cache: 'no-store' });
+      if (resp.ok) {
+        const json = await resp.json();
+        if (json && Array.isArray(json.adhkar) && Array.isArray(json.categories)) {
+          loadedData = json;
+          break;
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch from', url, err);
+    }
+  }
+
+  if (loadedData) {
+    categories = loadedData.categories;
+    adhkar = loadedData.adhkar.map(item => {
+      if (item.hadiths && Array.isArray(item.hadiths)) {
+        item.hadiths = item.hadiths.map(h => {
+          if (!h.sources && h.source) {
+            h.sources = [{ book: h.source || '', number: h.number || '' }];
+          }
+          return h;
+        });
+      }
+      return item;
+    });
+
+    saveCategories();
+    saveAdhkar();
+
+    if (loadedData.lastSync) {
+      setLastSyncTime(loadedData.lastSync);
+    }
+
+    renderOverview();
+    renderAdhkarList();
+    renderCategoriesGrid();
+    renderCategoryChips();
+    populateCategorySelect();
+    console.log(`[Adhkar Cloud] Loaded ${adhkar.length} adhkar and ${categories.length} categories from centralized repository.`);
+    return true;
+  }
+  return false;
+}
+
+// Sync current adhkar and categories directly to GitHub repository
+async function syncDataToGitHub({ silent = false, showToastOnSuccess = true } = {}) {
+  const token = getGitHubToken();
+  const repo = getGitHubRepo();
+
+  if (!token) {
+    if (!silent) {
+      openSyncModal();
+      showToast('يرجى حفظ رمز GitHub أولاً لتفعيل المزامنة السحابية', 'info');
+    }
+    return false;
+  }
+
+  const syncBtn = document.getElementById('manualSyncBtn');
+  const headerIcon = document.getElementById('headerSyncIcon');
+  if (syncBtn) {
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">refresh</span><span>جارٍ المزامنة...</span>';
+  }
+  if (headerIcon) {
+    headerIcon.classList.add('animate-spin');
+  }
+
+  try {
+    // Step 1: Get current file sha from GitHub Contents API
+    let currentSha = null;
+    try {
+      const getResp = await fetch(`https://api.github.com/repos/${repo}/contents/${DATA_FILE_PATH}?ref=main`, {
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      });
+      if (getResp.ok) {
+        const fileInfo = await getResp.json();
+        currentSha = fileInfo.sha;
+      }
+    } catch (getErr) {
+      console.warn('Notice: file might be new or network check failed', getErr);
+    }
+
+    // Step 2: Build the payload
+    const nowIso = new Date().toISOString();
+    const exportPayload = {
+      app: 'adhkar-manager',
+      version: '1.0.0',
+      lastSync: nowIso,
+      categoriesCount: categories.length,
+      adhkarCount: adhkar.length,
+      categories,
+      adhkar
+    };
+
+    const jsonString = JSON.stringify(exportPayload, null, 2);
+    const base64Content = utf8ToBase64(jsonString);
+
+    // Step 3: PUT to GitHub Contents API
+    const putBody = {
+      message: `تحديث قاعدة الأذكار (${adhkar.length} ذكراً) [تلقائي]`,
+      content: base64Content,
+      branch: 'main'
+    };
+    if (currentSha) {
+      putBody.sha = currentSha;
+    }
+
+    const putResp = await fetch(`https://api.github.com/repos/${repo}/contents/${DATA_FILE_PATH}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(putBody)
+    });
+
+    if (putResp.ok) {
+      setLastSyncTime(nowIso);
+      updateSyncButtonVisual();
+      updateSyncModalState();
+      if (showToastOnSuccess) {
+        showToast('تمت المزامنة وتحديث بيانات المستودع بنجاح! ☁️', 'cloud_done');
+      }
+      return true;
+    } else {
+      const errorJson = await putResp.json().catch(() => ({}));
+      const errMsg = errorJson.message || `رمز الخطأ: ${putResp.status}`;
+      console.error('GitHub API error:', errorJson);
+      if (!silent) {
+        showToast(`فشلت المزامنة: ${errMsg}`, 'error');
+      }
+      return false;
+    }
+  } catch (netErr) {
+    console.error('Network sync error:', netErr);
+    if (!silent) {
+      showToast('تعذر الاتصال بخادم GitHub للمزامنة', 'error');
+    }
+    return false;
+  } finally {
+    if (syncBtn) {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">cloud_upload</span><span>مزامنة الآن يدويًا</span>';
+    }
+    if (headerIcon) {
+      headerIcon.classList.remove('animate-spin');
+    }
+  }
+}
+
+// Automatically sync when dhikr or category is created, updated, or deleted
+function autoSyncIfConfigured(showFeedback = false) {
+  if (isAutoSyncEnabled() && getGitHubToken()) {
+    syncDataToGitHub({ silent: true, showToastOnSuccess: showFeedback });
+  }
+}
+
+// Modal open/close & token actions
+function openSyncModal() {
+  updateSyncModalState();
+  const modal = document.getElementById('syncModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeSyncModal() {
+  const modal = document.getElementById('syncModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function fillSuggestedToken() {
+  const input = document.getElementById('githubTokenInput');
+  if (!input) return;
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    try {
+      const clipText = await navigator.clipboard.readText();
+      if (clipText && clipText.startsWith('ghp_')) {
+        input.value = clipText.trim();
+        showToast('تم لصق الرمز من الحافظة بنجاح', 'content_paste');
+        return;
+      }
+    } catch (e) {}
+  }
+  input.focus();
+  showToast('يرجى إدخال أو لصق رمز GitHub Personal Access Token الخاص بك', 'vpn_key');
+}
+
+function toggleTokenVisibility() {
+  const input = document.getElementById('githubTokenInput');
+  const icon = document.getElementById('tokenEyeIcon');
+  if (!input) return;
+  if (input.type === 'password') {
+    input.type = 'text';
+    if (icon) icon.innerText = 'visibility_off';
+  } else {
+    input.type = 'password';
+    if (icon) icon.innerText = 'visibility';
+  }
+}
+
+async function saveSyncSettings() {
+  const tokenInput = document.getElementById('githubTokenInput');
+  const autoCheckbox = document.getElementById('syncAutoCheckbox');
+  const token = (tokenInput ? tokenInput.value : '').trim();
+  const autoSync = autoCheckbox ? autoCheckbox.checked : true;
+
+  if (!token) {
+    showToast('يرجى إدخال الرمز أو الضغط على استخدام الرمز المعتمد', 'warning');
+    return;
+  }
+
+  localStorage.setItem(STORAGE_KEY_GH_TOKEN, token);
+  localStorage.setItem(STORAGE_KEY_GH_REPO, DEFAULT_REPO);
+  localStorage.setItem(STORAGE_KEY_GH_AUTOSYNC, autoSync ? 'true' : 'false');
+
+  showToast('جارٍ اختبار الاتصال والمزامنة...', 'sync');
+  const success = await syncDataToGitHub({ silent: false, showToastOnSuccess: true });
+  if (success) {
+    updateSyncButtonVisual();
+    updateSyncModalState();
+    setTimeout(() => {
+      closeSyncModal();
+    }, 1200);
+  }
+}
+
+function disconnectSync() {
+  if (confirm('هل أنت متأكد من مسح رمز الوصول من هذا المتصفح؟ ستتوقف المزامنة التلقائية.')) {
+    localStorage.removeItem(STORAGE_KEY_GH_TOKEN);
+    const tokenInput = document.getElementById('githubTokenInput');
+    if (tokenInput) tokenInput.value = '';
+    updateSyncButtonVisual();
+    updateSyncModalState();
+    showToast('تم مسح رمز الوصول وإيقاف المزامنة');
+  }
+}
+
+function manualSyncNow() {
+  syncDataToGitHub({ silent: false, showToastOnSuccess: true });
 }
 
 // ================= BACKUP & EXPORT / IMPORT =================
@@ -1877,8 +2242,9 @@ window.addEventListener('keydown', (e) => {
 });
 
 // ================= INITIAL RUN =================
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initStorage();
+  updateSyncButtonVisual();
 
   const hash = window.location.hash.replace('#', '');
   if (SECTIONS.includes(hash)) {
@@ -1886,4 +2252,13 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     navigateTo('overview');
   }
+
+  // Load shared data from GitHub centralized JSON
+  try {
+    await loadSharedDataFromGitHub();
+    updateSyncButtonVisual();
+  } catch (err) {
+    console.warn('Initial GitHub cloud data check notice:', err);
+  }
 });
+

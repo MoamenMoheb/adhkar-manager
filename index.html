@@ -152,6 +152,11 @@
         <button onclick="navigateTo('categories')" title="أنواع الأذكار" class="w-10 h-10 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors">
           <span class="material-symbols-outlined text-[20px]">bookmarks</span>
         </button>
+        <button id="headerSyncBtn" onclick="openSyncModal()" title="مزامنة البيانات السحابية (GitHub Sync)" class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all active:scale-95 text-secondary border-secondary/30 bg-secondary/10 hover:bg-secondary/20 cursor-pointer">
+          <span class="material-symbols-outlined text-[17px]" id="headerSyncIcon">cloud_sync</span>
+          <span class="hidden sm:inline" id="headerSyncText">مزامنة سحابية</span>
+          <span class="w-2 h-2 rounded-full bg-outline" id="headerSyncDot" title="غير متصل"></span>
+        </button>
       </div>
     </div>
   </header>
@@ -259,7 +264,7 @@
           <h2 class="text-sm font-headline font-bold text-on-surface">إجراءات الإدارة السريعة</h2>
           <span class="text-xs text-outline">إضافة وتسبيح فوري</span>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           <button onclick="navigateTo('misbaha')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white shadow hover:opacity-95 active:scale-[0.99] transition-all">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-[20px]">touch_app</span>
@@ -280,6 +285,14 @@
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-[20px] text-secondary">create_new_folder</span>
               <span class="text-xs font-semibold">إدارة أنواع الأذكار</span>
+            </div>
+            <span class="material-symbols-outlined text-[15px] text-outline">arrow_back_ios_new</span>
+          </button>
+
+          <button onclick="openSyncModal()" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[20px] text-secondary">cloud_sync</span>
+              <span class="text-xs font-semibold">مزامنة سحابية</span>
             </div>
             <span class="material-symbols-outlined text-[15px] text-outline">arrow_back_ios_new</span>
           </button>
@@ -922,6 +935,102 @@
         </button>
         <button onclick="closeDetailModal()" class="px-4 py-2 rounded-xl bg-surface-container text-on-surface text-xs font-medium hover:bg-surface-container-high">
           إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: GITHUB CLOUD SYNC ================= -->
+  <div id="syncModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden animate-fade-in">
+    <div class="bg-surface-container-lowest rounded-2xl w-full max-w-lg flex flex-col shadow-2xl border border-surface-container-high overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-surface-container-high flex items-center justify-between bg-surface-container-low">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center">
+            <span class="material-symbols-outlined text-[22px]">cloud_sync</span>
+          </div>
+          <div>
+            <h3 class="font-headline font-bold text-base text-primary">المزامنة السحابية (GitHub Cloud Sync)</h3>
+            <p class="text-[11px] text-on-surface-variant">مشاركة وتحديث ملف <span class="font-mono text-secondary font-semibold">data/adhkar_data.json</span> تلقائياً عبر كل المتصفحات</p>
+          </div>
+        </div>
+        <button onclick="closeSyncModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-on-surface hover:bg-surface-container transition-colors">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4 text-xs">
+        <!-- Status Box -->
+        <div id="syncStatusBox" class="p-3.5 rounded-xl border flex items-center justify-between gap-3 bg-surface-container-low border-surface-container-high">
+          <div class="flex items-center gap-2.5">
+            <span class="w-3 h-3 rounded-full bg-outline shrink-0" id="syncStatusDot"></span>
+            <div>
+              <div class="font-bold text-on-surface" id="syncStatusTitle">حالة الربط: غير متصل</div>
+              <div class="text-[11px] text-outline mt-0.5" id="syncStatusDesc">أدخل رمز الوصول الخاص بالمستودع لتفعيل المزامنة التلقائية</div>
+            </div>
+          </div>
+          <span class="text-[10px] text-outline shrink-0 font-mono" id="syncLastTimeText"></span>
+        </div>
+
+        <!-- Token Input -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="font-semibold text-on-surface flex items-center gap-1">
+              <span class="material-symbols-outlined text-[15px] text-secondary">key</span>
+              <span>رمز الوصول الشخصي (GitHub Personal Access Token):</span>
+            </label>
+            <button type="button" onclick="fillSuggestedToken()" class="text-[11px] text-primary hover:underline font-medium cursor-pointer flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">content_paste</span>
+              <span>لصق من الحافظة</span>
+            </button>
+          </div>
+          <div class="relative">
+            <input id="githubTokenInput" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" class="w-full bg-surface-container-low text-on-surface px-3 py-2.5 rounded-xl font-mono text-xs focus:outline-none focus:ring-2 focus:ring-secondary pl-10" />
+            <button type="button" onclick="toggleTokenVisibility()" class="absolute left-2.5 top-2.5 text-outline hover:text-on-surface cursor-pointer">
+              <span class="material-symbols-outlined text-[18px]" id="tokenEyeIcon">visibility</span>
+            </button>
+          </div>
+          <p class="text-[11px] text-outline leading-relaxed">
+            يُحفظ هذا الرمز بأمان محلياً في متصفحك فقط، ويُستخدم تلقائياً عند إضافة أو تعديل أو حذف أي ذكر لتحديث المستودع فوراً لجميع المتصفحات.
+          </p>
+        </div>
+
+        <!-- Repository Info -->
+        <div class="space-y-1 p-3 rounded-xl bg-surface-container-lowest border border-surface-container-high/60">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-on-surface-variant font-medium">المستودع المستهدف:</span>
+            <span class="font-mono text-secondary font-bold" id="syncRepoDisplay">MoamenMoheb/adhkar-manager</span>
+          </div>
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-on-surface-variant font-medium">الملف المركزي المشترك:</span>
+            <span class="font-mono text-secondary font-bold">data/adhkar_data.json</span>
+          </div>
+        </div>
+
+        <!-- Auto-Sync Toggle -->
+        <label class="flex items-center gap-2.5 cursor-pointer select-none p-2 rounded-xl hover:bg-surface-container-low transition-colors">
+          <input type="checkbox" id="syncAutoCheckbox" checked class="w-4 h-4 rounded text-secondary focus:ring-secondary cursor-pointer" />
+          <span class="text-xs font-semibold text-on-surface">
+            تفعيل المزامنة السحابية التلقائية فور إضافة أو تعديل أو حذف أي ذكر
+          </span>
+        </label>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 border-t border-surface-container-high bg-surface-container-low flex items-center justify-between gap-2 flex-wrap">
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="saveSyncSettings()" class="px-4 py-2 rounded-xl bg-secondary text-white text-xs font-bold hover:bg-secondary/90 transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">save</span>
+            <span>حفظ واختبار الربط</span>
+          </button>
+          <button type="button" id="manualSyncBtn" onclick="manualSyncNow()" class="px-3.5 py-2 rounded-xl bg-surface-container text-on-surface text-xs font-semibold hover:bg-surface-container-high transition-all flex items-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
+            <span>مزامنة الآن يدويًا</span>
+          </button>
+        </div>
+        <button type="button" onclick="disconnectSync()" id="disconnectSyncBtn" class="text-xs text-error hover:underline flex items-center gap-1 cursor-pointer">
+          <span>مسح الرمز</span>
         </button>
       </div>
     </div>
