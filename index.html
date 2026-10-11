@@ -693,10 +693,17 @@
           <span id="misbahaVirtueText">من قالها موقناً بها حين يصبح ومات دخل الجنة.</span>
         </div>
 
-        <!-- Source / Hadith reference snippet -->
-        <div id="misbahaSourceBox" class="text-[11px] text-outline flex items-center gap-1.5 z-10">
-          <span class="material-symbols-outlined text-[15px] text-secondary">menu_book</span>
-          <span id="misbahaSourceText">صحيح البخاري #6306 - صحيح</span>
+        <!-- Source / Hadith reference snippet & View Hadiths Button -->
+        <div class="flex items-center gap-2.5 flex-wrap justify-center z-10">
+          <div id="misbahaSourceBox" class="text-[11px] text-outline flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[15px] text-secondary">menu_book</span>
+            <span id="misbahaSourceText">صحيح مسلم #591</span>
+          </div>
+          <button id="misbahaViewHadithsBtn" onclick="openCurrentMisbahaHadiths()" title="عرض الأحاديث النبوية المسندة لهذا الذكر" class="inline-flex items-center gap-1.5 bg-secondary-fixed/50 hover:bg-secondary-fixed text-primary px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95 border border-secondary/30">
+            <span class="material-symbols-outlined text-[16px] text-secondary">auto_stories</span>
+            <span>أحاديث وسند الذكر</span>
+            <span id="misbahaHadithsCountBadge" class="bg-primary text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">1</span>
+          </button>
         </div>
 
         <!-- THE BIG TACTILE MISBAHA BUTTON / CIRCLE -->
