@@ -451,13 +451,15 @@ function saveAdhkar() {
 }
 
 // ================= NAVIGATION =================
-const SECTIONS = ['overview', 'adhkar', 'misbaha', 'add', 'categories'];
+const SECTIONS = ['overview', 'adhkar', 'misbaha', 'add', 'categories', 'worship', 'leaderboard'];
 const SECTION_TITLES = {
   overview: 'نظرة عامة',
   adhkar: 'متون الأذكار',
   misbaha: 'المسبحة الإلكترونية',
   add: 'إضافة وتوثيق ذكر',
-  categories: 'أنواع وتصنيفات الأذكار'
+  categories: 'أنواع وتصنيفات الأذكار',
+  worship: 'الورد والعبادات اليومية',
+  leaderboard: 'لوحة المتصدرين وتنافس الأصدقاء'
 };
 
 function navigateTo(viewName, options = {}) {
@@ -507,6 +509,10 @@ function navigateTo(viewName, options = {}) {
     if (!options.isEditing) {
       resetAddForm();
     }
+  } else if (viewName === 'worship') {
+    renderWorshipView();
+  } else if (viewName === 'leaderboard') {
+    renderLeaderboardView();
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2507,11 +2513,744 @@ function startSingleDhikrMisbaha(dhikrId) {
   renderMisbahaActiveDhikr();
 }
 
+// ================= GAMIFIED DAILY WORSHIP TRACKER =================
+async function renderWorshipView() {
+  const container = document.getElementById('worshipChecklistContainer');
+  if (!container) return;
+
+  const todayStatus = await supabaseService.getTodayWorshipStatus();
+  const profile = supabaseService.currentProfile;
+  const user = supabaseService.currentUser;
+
+  // Guest notice
+  const guestNotice = document.getElementById('worshipGuestNotice');
+  if (guestNotice) {
+    if (user) {
+      guestNotice.classList.add('hidden');
+    } else {
+      guestNotice.classList.remove('hidden');
+    }
+  }
+
+  // Calculate today's points
+  let earnedToday = 0;
+  Object.keys(todayStatus).forEach(key => {
+    const task = WORSHIP_TASKS.find(t => t.key === key);
+    if (task) earnedToday += task.points;
+  });
+
+  const percent = Math.min(100, Math.round((earnedToday / TOTAL_DAILY_MAX_POINTS) * 100));
+
+  // Update banner counters
+  const streakEl = document.getElementById('worshipStreakDisplay');
+  if (streakEl) streakEl.innerText = `${profile?.streak_count || (user ? 0 : 1)} أيام متتالية`;
+
+  const totalPointsEl = document.getElementById('worshipTotalPointsDisplay');
+  if (totalPointsEl) totalPointsEl.innerText = `${profile?.total_points ?? earnedToday} نقطة`;
+
+  const pointsTodayEl = document.getElementById('worshipPointsTodayText');
+  if (pointsTodayEl) pointsTodayEl.innerText = `${earnedToday} / ${TOTAL_DAILY_MAX_POINTS} نقطة`;
+
+  const percentEl = document.getElementById('worshipProgressPercentText');
+  if (percentEl) percentEl.innerText = `${percent}%`;
+
+  const progressBar = document.getElementById('worshipProgressBar');
+  if (progressBar) progressBar.style.width = `${percent}%`;
+
+  // Group tasks by category
+  const categories = [
+    {
+      id: 'prayers',
+      name: 'الصلوات الخمس المفروضة',
+      subtitle: 'أركان الإسلام وأعظم ما يتقرب به العبد',
+      icon: 'mosque',
+      color: '#003527',
+      tasks: WORSHIP_TASKS.filter(t => t.category === 'prayers')
+    },
+    {
+      id: 'nawafil',
+      name: 'قيام الليل والسنن',
+      subtitle: 'شرف المؤمن وخلوة الأنس بالله في ظلمات الليل',
+      icon: 'nights_stay',
+      color: '#6a3700',
+      tasks: WORSHIP_TASKS.filter(t => t.category === 'nawafil')
+    },
+    {
+      id: 'adhkar',
+      name: 'الأذكار المأثورة (الصباح والمساء)',
+      subtitle: 'حصن المسلم وحرزه المنيع من كل سوء',
+      icon: 'auto_stories',
+      color: '#006a61',
+      tasks: WORSHIP_TASKS.filter(t => t.category === 'adhkar')
+    },
+    {
+      id: 'quran_charity',
+      name: 'القرآن الكريم والإنفاق',
+      subtitle: 'نور الصدور وتفريج الكربات ومضاعفة الأجور',
+      icon: 'menu_book',
+      color: '#064e3b',
+      tasks: WORSHIP_TASKS.filter(t => t.category === 'quran' || t.category === 'charity')
+    }
+  ];
+
+  let html = '';
+
+  categories.forEach(cat => {
+    const completedCount = cat.tasks.filter(t => todayStatus[t.key]).length;
+    const isAllDone = completedCount === cat.tasks.length;
+
+    html += `
+      <div class="bg-surface-container-lowest rounded-2xl p-4 sm:p-5 shadow-sm border border-surface-container-high/60 space-y-3.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white" style="background-color: ${cat.color}">
+              <span class="material-symbols-outlined text-[20px]">${cat.icon}</span>
+            </div>
+            <div>
+              <h3 class="font-headline font-bold text-sm sm:text-base text-on-surface">${cat.name}</h3>
+              <p class="text-[11px] text-on-surface-variant">${cat.subtitle}</p>
+            </div>
+          </div>
+          <span class="text-xs font-bold px-2.5 py-1 rounded-lg ${isAllDone ? 'bg-secondary-container text-on-secondary-container' : 'bg-surface-container text-on-surface-variant'}">
+            ${completedCount} / ${cat.tasks.length}
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+    `;
+
+    cat.tasks.forEach(t => {
+      const isDone = !!todayStatus[t.key];
+
+      html += `
+        <div class="p-3.5 rounded-xl border transition-all duration-200 flex items-center justify-between gap-3 ${
+          isDone
+            ? 'bg-secondary/5 border-secondary/40 shadow-xs'
+            : 'bg-surface-container-low border-surface-container-high hover:border-primary/40'
+        }">
+          <div class="flex items-center gap-3 min-w-0">
+            <button 
+              type="button" 
+              onclick="handleWorshipToggle('${t.key}', ${!isDone})" 
+              class="w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer ${
+                isDone 
+                  ? 'bg-secondary text-white shadow-xs' 
+                  : 'border-2 border-outline hover:border-primary bg-surface'
+              }"
+              title="${isDone ? 'إلغاء التحديد' : 'تحديد كمنجز'}"
+            >
+              ${isDone ? '<span class="material-symbols-outlined text-[17px]">check</span>' : ''}
+            </button>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="font-bold text-xs sm:text-sm text-on-surface truncate ${isDone ? 'line-through text-outline' : ''}">${t.title}</span>
+                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isDone ? 'bg-secondary/15 text-secondary' : 'bg-primary/10 text-primary'}">+${t.points} نقطة</span>
+              </div>
+              <p class="text-[11px] text-outline truncate mt-0.5">${t.subtitle}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1 shrink-0">
+            ${
+              t.linkCategoryId
+                ? `<button onclick="navigateTo('misbaha', { categoryId: '${t.linkCategoryId}' })" title="فتح وقراءة هذا الذكر في المسبحة" class="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary transition-all text-[11px] flex items-center gap-1 cursor-pointer">
+                     <span class="material-symbols-outlined text-[16px]">touch_app</span>
+                     <span class="hidden xs:inline">قراءة</span>
+                   </button>`
+                : ''
+            }
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+async function handleWorshipToggle(key, isCompleted) {
+  const task = WORSHIP_TASKS.find(t => t.key === key);
+  if (!task) return;
+
+  const result = await supabaseService.toggleWorshipTask(key, isCompleted);
+  if (!result.success) return;
+
+  // Haptic feedback if available on mobile
+  if (isCompleted && window.navigator && window.navigator.vibrate) {
+    try { window.navigator.vibrate([35, 50, 35]); } catch(e) {}
+  }
+
+  // Audio / Toast feedback
+  if (isCompleted) {
+    showToast(`تقبل الله! أتممت ${task.title} (+${task.points} نقطة) ⭐`, 'verified');
+  } else {
+    showToast(`تم إلغاء تحديد ${task.title}`, 'info');
+  }
+
+  // Re-render
+  await renderWorshipView();
+
+  // Also update user points badge in header if logged in
+  if (supabaseService.currentUser) {
+    updateHeaderUserState(supabaseService.currentUser, supabaseService.currentProfile);
+  }
+}
+
+// ================= SOCIAL LEADERBOARD & FRIENDS =================
+let currentLeaderboardScope = false; // false = Global, true = Friends Only
+let currentLeaderboardTimeframe = 'today'; // 'today', 'week', 'month', 'all'
+
+function setLeaderboardScope(isFriendsOnly) {
+  currentLeaderboardScope = isFriendsOnly;
+  const btnFriends = document.getElementById('btnScopeFriends');
+  const btnGlobal = document.getElementById('btnScopeGlobal');
+
+  if (btnFriends && btnGlobal) {
+    if (isFriendsOnly) {
+      btnFriends.className = 'flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-lowest text-primary shadow-xs cursor-pointer';
+      btnGlobal.className = 'flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all cursor-pointer';
+    } else {
+      btnGlobal.className = 'flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-lowest text-primary shadow-xs cursor-pointer';
+      btnFriends.className = 'flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all cursor-pointer';
+    }
+  }
+
+  renderLeaderboardView();
+}
+
+function setLeaderboardTimeframe(tf) {
+  currentLeaderboardTimeframe = tf;
+  const timeframes = ['today', 'week', 'month', 'all'];
+  timeframes.forEach(t => {
+    const cap = t.charAt(0).toUpperCase() + t.slice(1);
+    const btn = document.getElementById(`btnTf${cap}`);
+    if (btn) {
+      if (t === tf) {
+        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-white shadow-xs cursor-pointer';
+      } else {
+        btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-container text-on-surface-variant hover:bg-surface-container-high cursor-pointer';
+      }
+    }
+  });
+
+  renderLeaderboardView();
+}
+
+async function renderLeaderboardView() {
+  const profile = supabaseService.currentProfile;
+  const user = supabaseService.currentUser;
+
+  // Display user's own friend code
+  const friendCodeDisplay = document.getElementById('myFriendCodeDisplay');
+  if (friendCodeDisplay) {
+    friendCodeDisplay.innerText = profile?.friend_code || (user ? 'ADK-' + user.id.substring(0, 4).toUpperCase() : 'سجل للدخول');
+  }
+
+  // Check pending friend requests
+  await renderPendingRequests();
+
+  // Fetch leaderboard data
+  const listContainer = document.getElementById('leaderboardListContainer');
+  const podiumContainer = document.getElementById('leaderboardPodium');
+  const countText = document.getElementById('leaderboardCountText');
+
+  if (listContainer) {
+    listContainer.innerHTML = `
+      <div class="p-8 text-center text-outline text-xs flex items-center justify-center gap-2">
+        <span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+        <span>جاري تحميل قائمة المتصدرين...</span>
+      </div>
+    `;
+  }
+
+  const data = await supabaseService.fetchLeaderboard(currentLeaderboardTimeframe, currentLeaderboardScope);
+
+  if (countText) countText.innerText = `${data.length} متسابق`;
+
+  // Render Podium (Top 3)
+  if (podiumContainer) {
+    if (data.length === 0) {
+      podiumContainer.innerHTML = '';
+    } else {
+      const first = data[0] || null;
+      const second = data[1] || null;
+      const third = data[2] || null;
+
+      podiumContainer.innerHTML = `
+        <!-- 2nd Place -->
+        <div class="flex flex-col items-center text-center">
+          ${second ? `
+            <div class="relative mb-2">
+              <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-slate-400 to-slate-200 text-slate-800 flex items-center justify-center font-bold text-base shadow-sm ring-2 ring-slate-300">
+                ${second.display_name?.charAt(0) || '٢'}
+              </div>
+              <span class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-500 text-white font-bold text-[10px] flex items-center justify-center shadow">2</span>
+            </div>
+            <div class="font-bold text-xs text-on-surface truncate max-w-[90px] sm:max-w-[120px]">${second.display_name}</div>
+            <div class="text-[11px] font-bold text-secondary mt-0.5">${second.points} ن</div>
+            <div class="text-[10px] text-amber-500 mt-0.5">🔥 ${second.streak_count || 0} د</div>
+          ` : `
+            <div class="w-10 h-10 rounded-xl bg-surface-container opacity-40"></div>
+          `}
+        </div>
+
+        <!-- 1st Place (Champion) -->
+        <div class="flex flex-col items-center text-center -translate-y-2">
+          ${first ? `
+            <div class="relative mb-2">
+              <span class="material-symbols-outlined text-amber-400 text-[26px] animate-bounce mb-0.5">crown</span>
+              <div class="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-gradient-to-tr from-amber-400 via-amber-300 to-yellow-100 text-amber-900 flex items-center justify-center font-bold text-xl shadow-md ring-4 ring-amber-300/60">
+                ${first.display_name?.charAt(0) || '١'}
+              </div>
+              <span class="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-amber-500 text-white font-bold text-xs flex items-center justify-center shadow">1</span>
+            </div>
+            <div class="font-bold text-xs sm:text-sm text-on-surface truncate max-w-[100px] sm:max-w-[140px]">${first.display_name}</div>
+            <div class="text-xs font-bold text-primary mt-0.5">${first.points} نقطة</div>
+            <div class="text-[11px] text-amber-500 font-semibold mt-0.5">🔥 ${first.streak_count || 0} يوم</div>
+          ` : `
+            <div class="w-12 h-12 rounded-xl bg-surface-container opacity-40"></div>
+          `}
+        </div>
+
+        <!-- 3rd Place -->
+        <div class="flex flex-col items-center text-center">
+          ${third ? `
+            <div class="relative mb-2">
+              <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-amber-700 to-amber-500 text-white flex items-center justify-center font-bold text-base shadow-sm ring-2 ring-amber-600/40">
+                ${third.display_name?.charAt(0) || '٣'}
+              </div>
+              <span class="absolute -bottom-1.5 -right-1.5 w-5 h-5 rounded-full bg-amber-700 text-white font-bold text-[10px] flex items-center justify-center shadow">3</span>
+            </div>
+            <div class="font-bold text-xs text-on-surface truncate max-w-[90px] sm:max-w-[120px]">${third.display_name}</div>
+            <div class="text-[11px] font-bold text-secondary mt-0.5">${third.points} ن</div>
+            <div class="text-[10px] text-amber-500 mt-0.5">🔥 ${third.streak_count || 0} د</div>
+          ` : `
+            <div class="w-10 h-10 rounded-xl bg-surface-container opacity-40"></div>
+          `}
+        </div>
+      `;
+    }
+  }
+
+  // Render Full Leaderboard List
+  if (listContainer) {
+    if (data.length === 0) {
+      listContainer.innerHTML = `
+        <div class="p-8 text-center space-y-2">
+          <div class="w-12 h-12 rounded-2xl bg-surface-container text-outline flex items-center justify-center mx-auto">
+            <span class="material-symbols-outlined text-[24px]">group_off</span>
+          </div>
+          <div class="font-bold text-xs text-on-surface">لا يوجد متنافسون في هذا التبويب بعد</div>
+          <p class="text-[11px] text-outline max-w-xs mx-auto">
+            ${currentLeaderboardScope 
+              ? 'لم تقم بإضافة أصدقاء بعد. انسخ كود صداقتك بالأعلى وأرسله لأصدقائك للتنافس معاً!' 
+              : 'كن أول من يسجل أوراده اليومية ويتصدر القائمة!'}
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    let listHtml = '';
+    data.forEach((row, index) => {
+      const isMe = row.is_me || (user && row.user_id === user.id);
+      const rankNum = row.rank || index + 1;
+
+      listHtml += `
+        <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-colors ${
+          isMe ? 'bg-primary/5 font-semibold' : 'hover:bg-surface-container-low'
+        }">
+          <div class="flex items-center gap-3 min-w-0">
+            <!-- Rank Badge -->
+            <span class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+              rankNum === 1
+                ? 'bg-amber-400 text-amber-950 shadow-xs'
+                : rankNum === 2
+                ? 'bg-slate-300 text-slate-800'
+                : rankNum === 3
+                ? 'bg-amber-700 text-white'
+                : 'bg-surface-container text-on-surface-variant'
+            }">
+              ${rankNum}
+            </span>
+
+            <!-- Avatar & Name -->
+            <div class="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-primary font-bold text-sm shrink-0">
+              ${row.display_name?.charAt(0) || 'م'}
+            </div>
+
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-xs sm:text-sm text-on-surface truncate">${row.display_name}</span>
+                ${isMe ? '<span class="text-[9px] bg-primary text-white font-bold px-1.5 py-0.2 rounded">أنت</span>' : ''}
+                ${row.is_friend && !isMe ? '<span class="text-[9px] bg-secondary-container text-on-secondary-container font-bold px-1.5 py-0.2 rounded">صديق</span>' : ''}
+              </div>
+              <div class="flex items-center gap-2 text-[10px] text-outline mt-0.5">
+                <span class="font-mono">${row.friend_code || ''}</span>
+                <span>•</span>
+                <span class="text-amber-500 font-medium">🔥 ${row.streak_count || 0} يوم متتالي</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Points Display -->
+          <div class="text-left shrink-0">
+            <div class="text-xs sm:text-sm font-bold text-primary">${row.points} <span class="text-[10px] text-outline font-normal">نقطة</span></div>
+          </div>
+        </div>
+      `;
+    });
+
+    listContainer.innerHTML = listHtml;
+  }
+}
+
+async function renderPendingRequests() {
+  const container = document.getElementById('pendingRequestsContainer');
+  if (!container) return;
+
+  const requests = await supabaseService.fetchFriendRequests();
+  if (requests.length === 0) {
+    container.classList.add('hidden');
+    container.innerHTML = '';
+    return;
+  }
+
+  container.classList.remove('hidden');
+  let html = `
+    <div class="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 space-y-2">
+      <div class="flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-200">
+        <span class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px]">notifications_active</span>
+          <span>طلبات صداقة جديدة (${requests.length})</span>
+        </span>
+      </div>
+      <div class="divide-y divide-amber-200/60 dark:divide-amber-800/40">
+  `;
+
+  requests.forEach(req => {
+    const sender = req.sender || {};
+    html += `
+      <div class="py-2 flex items-center justify-between gap-2 flex-wrap">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-amber-200 text-amber-900 flex items-center justify-center font-bold text-xs">
+            ${sender.display_name?.charAt(0) || 'ص'}
+          </div>
+          <div>
+            <div class="text-xs font-bold text-on-surface">${sender.display_name || 'مستخدم'}</div>
+            <div class="text-[10px] text-outline font-mono">${sender.friend_code || ''}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button onclick="handleRespondFriendRequest('${req.id}', true)" class="px-2.5 py-1 rounded-lg bg-primary text-white text-[11px] font-bold hover:bg-primary-container transition-all cursor-pointer">
+            قبول
+          </button>
+          <button onclick="handleRespondFriendRequest('${req.id}', false)" class="px-2.5 py-1 rounded-lg bg-surface-container text-on-surface text-[11px] font-medium hover:bg-surface-container-high transition-all cursor-pointer">
+            رفض
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+async function handleSendFriendRequestSubmit(e) {
+  e.preventDefault();
+  const input = document.getElementById('addFriendCodeInput');
+  const code = (input?.value || '').trim();
+
+  if (!code) {
+    showToast('يرجى إدخال كود الصداقة', 'error');
+    return;
+  }
+
+  try {
+    const res = await supabaseService.sendFriendRequestByCode(code);
+    if (res.acceptedDirectly) {
+      showToast(`تم قبول الصداقة مع ${res.targetProfile.display_name} بنجاح! 🎉`, 'verified');
+    } else {
+      showToast(`تم إرسال طلب الصداقة إلى ${res.targetProfile.display_name} بنجاح! 📨`, 'check_circle');
+    }
+    input.value = '';
+    renderLeaderboardView();
+  } catch (err) {
+    showToast(err.message || 'حدث خطأ في إرسال الطلب', 'error');
+  }
+}
+
+async function handleRespondFriendRequest(friendshipId, accept) {
+  try {
+    await supabaseService.respondToFriendRequest(friendshipId, accept);
+    showToast(accept ? 'تم قبول طلب الصداقة بنجاح!' : 'تم رفض طلب الصداقة', accept ? 'verified' : 'info');
+    renderLeaderboardView();
+  } catch (err) {
+    showToast('حدث خطأ في الرد على الطلب', 'error');
+  }
+}
+
+function copyMyFriendCode() {
+  const code = supabaseService.currentProfile?.friend_code || (supabaseService.currentUser ? 'ADK-' + supabaseService.currentUser.id.substring(0, 4).toUpperCase() : '');
+  if (!code) {
+    openAuthModal();
+    return;
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(() => {
+      showToast(`تم نسخ كود صداقتك (${code}) بنجاح! شاركه مع أصدقائك 📋`, 'content_copy');
+    }).catch(() => {
+      prompt('انسخ كود الصداقة الخاص بك:', code);
+    });
+  } else {
+    prompt('انسخ كود الصداقة الخاص بك:', code);
+  }
+}
+
+// ================= AUTH & PROFILE MODALS =================
+let currentAuthTab = 'signin';
+
+function handleHeaderUserBtnClick() {
+  if (supabaseService.currentUser) {
+    openProfileModal();
+  } else {
+    openAuthModal('signin');
+  }
+}
+
+function openAuthModal(tab = 'signin') {
+  switchAuthTab(tab);
+  const errBox = document.getElementById('authErrorBox');
+  if (errBox) errBox.classList.add('hidden');
+  document.getElementById('authModal')?.classList.remove('hidden');
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal')?.classList.add('hidden');
+}
+
+function switchAuthTab(tab) {
+  currentAuthTab = tab;
+  const tabSignIn = document.getElementById('authTabSignIn');
+  const tabSignUp = document.getElementById('authTabSignUp');
+  const nameField = document.getElementById('authNameField');
+  const submitBtnText = document.getElementById('authSubmitBtnText');
+  const modalTitle = document.getElementById('authModalTitle');
+
+  if (tab === 'signup') {
+    tabSignUp.className = 'flex-1 py-2 text-xs font-bold rounded-lg bg-surface-container-lowest text-primary shadow-xs transition-all cursor-pointer';
+    tabSignIn.className = 'flex-1 py-2 text-xs font-medium rounded-lg text-on-surface-variant hover:text-on-surface transition-all cursor-pointer';
+    nameField.classList.remove('hidden');
+    if (submitBtnText) submitBtnText.innerText = 'إنشاء حساب جديد والتنافس';
+    if (modalTitle) modalTitle.innerText = 'إنشاء حساب جديد';
+  } else {
+    tabSignIn.className = 'flex-1 py-2 text-xs font-bold rounded-lg bg-surface-container-lowest text-primary shadow-xs transition-all cursor-pointer';
+    tabSignUp.className = 'flex-1 py-2 text-xs font-medium rounded-lg text-on-surface-variant hover:text-on-surface transition-all cursor-pointer';
+    nameField.classList.add('hidden');
+    if (submitBtnText) submitBtnText.innerText = 'تسجيل الدخول';
+    if (modalTitle) modalTitle.innerText = 'تسجيل الدخول والتنافس';
+  }
+}
+
+async function handleAuthSubmit(e) {
+  e.preventDefault();
+  const email = (document.getElementById('authEmailInput')?.value || '').trim();
+  const password = (document.getElementById('authPasswordInput')?.value || '').trim();
+  const name = (document.getElementById('authNameInput')?.value || '').trim();
+  const errBox = document.getElementById('authErrorBox');
+
+  if (errBox) errBox.classList.add('hidden');
+
+  try {
+    if (currentAuthTab === 'signup') {
+      if (!name) throw new Error('يرجى إدخال اسمك المعروض للأصدقاء');
+      await supabaseService.signUp(email, password, name);
+      showToast('تم إنشاء الحساب بنجاح! أهلاً بك 🎉', 'verified');
+    } else {
+      await supabaseService.signIn(email, password);
+      showToast('تم تسجيل الدخول بنجاح! مرحباً بك 🌿', 'verified');
+    }
+    closeAuthModal();
+    renderWorshipView();
+    renderLeaderboardView();
+  } catch (err) {
+    if (errBox) {
+      errBox.innerText = err.message || 'حدث خطأ في المصادقة';
+      errBox.classList.remove('hidden');
+    }
+  }
+}
+
+async function openProfileModal() {
+  const profile = supabaseService.currentProfile;
+  const user = supabaseService.currentUser;
+  if (!user) return;
+
+  const nameEl = document.getElementById('profileModalName');
+  const emailEl = document.getElementById('profileModalEmail');
+  const avatarEl = document.getElementById('profileModalAvatar');
+  const codeEl = document.getElementById('profileModalFriendCode');
+  const pointsEl = document.getElementById('profileModalPoints');
+  const streakEl = document.getElementById('profileModalStreak');
+
+  const displayName = profile?.display_name || user.email?.split('@')[0] || 'المستخدم';
+  if (nameEl) nameEl.innerText = displayName;
+  if (emailEl) emailEl.innerText = user.email || '';
+  if (avatarEl) avatarEl.innerText = displayName.charAt(0);
+  if (codeEl) codeEl.innerText = profile?.friend_code || ('ADK-' + user.id.substring(0, 4).toUpperCase());
+  if (pointsEl) pointsEl.innerText = profile?.total_points || 0;
+  if (streakEl) streakEl.innerText = `🔥 ${profile?.streak_count || 0} يوم`;
+
+  // Render Friends list in Profile
+  const friends = await supabaseService.fetchFriendsList();
+  const friendsListEl = document.getElementById('profileFriendsList');
+  const friendsCountEl = document.getElementById('profileFriendsCount');
+
+  if (friendsCountEl) friendsCountEl.innerText = `${friends.length} صديق`;
+
+  if (friendsListEl) {
+    if (friends.length === 0) {
+      friendsListEl.innerHTML = `
+        <div class="p-3 text-center text-outline text-[11px]">
+          لم تضف أصدقاء بعد. شارك كود صداقتك لإضافتهم!
+        </div>
+      `;
+    } else {
+      let fHtml = '';
+      friends.forEach(f => {
+        fHtml += `
+          <div class="p-2 rounded-xl bg-surface-container-low flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-surface-container text-primary flex items-center justify-center font-bold text-xs">
+                ${f.display_name?.charAt(0) || 'ص'}
+              </div>
+              <div>
+                <div class="font-bold text-xs text-on-surface">${f.display_name}</div>
+                <div class="text-[10px] text-outline font-mono">${f.friend_code}</div>
+              </div>
+            </div>
+            <button onclick="handleRemoveFriend('${f.friendshipId}')" title="إلغاء الصداقة" class="text-error hover:bg-error/10 p-1 rounded-lg transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">person_remove</span>
+            </button>
+          </div>
+        `;
+      });
+      friendsListEl.innerHTML = fHtml;
+    }
+  }
+
+  document.getElementById('profileModal')?.classList.remove('hidden');
+}
+
+function closeProfileModal() {
+  document.getElementById('profileModal')?.classList.add('hidden');
+}
+
+async function handleRemoveFriend(friendshipId) {
+  if (!confirm('هل تريد بالتأكيد إلغاء الصداقة مع هذا المستخدم؟')) return;
+  try {
+    await supabaseService.removeFriend(friendshipId);
+    showToast('تم إلغاء الصداقة', 'info');
+    openProfileModal();
+    renderLeaderboardView();
+  } catch (e) {
+    showToast('حدث خطأ أثناء إلغاء الصداقة', 'error');
+  }
+}
+
+async function handleSignOut() {
+  await supabaseService.signOut();
+  closeProfileModal();
+  showToast('تم تسجيل الخروج بنجاح', 'info');
+  renderWorshipView();
+  renderLeaderboardView();
+}
+
+function updateHeaderUserState(user, profile) {
+  const nameEl = document.getElementById('headerUserName');
+  const iconEl = document.getElementById('headerUserIcon');
+  const badgeEl = document.getElementById('headerUserPointsBadge');
+
+  if (user) {
+    if (nameEl) nameEl.innerText = profile?.display_name || user.email?.split('@')[0] || 'حسابي';
+    if (iconEl) iconEl.innerText = 'account_circle';
+    if (badgeEl) {
+      badgeEl.classList.remove('hidden');
+      badgeEl.innerText = `${profile?.total_points || 0} ن`;
+    }
+  } else {
+    if (nameEl) nameEl.innerText = 'تسجيل الدخول';
+    if (iconEl) iconEl.innerText = 'account_circle';
+    if (badgeEl) badgeEl.classList.add('hidden');
+  }
+}
+
+// ================= SUPABASE CONFIGURATION MODAL =================
+function openSupabaseConfigModal() {
+  const config = supabaseService.loadConfig();
+  const urlInput = document.getElementById('supabaseUrlInput');
+  const keyInput = document.getElementById('supabaseKeyInput');
+  const statusDot = document.getElementById('supabaseStatusDot');
+  const statusText = document.getElementById('supabaseStatusText');
+
+  if (urlInput) urlInput.value = config.url || '';
+  if (keyInput) keyInput.value = config.anonKey || '';
+
+  if (statusDot && statusText) {
+    if (supabaseService.isConfigured) {
+      statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500';
+      statusText.innerText = 'الحالة: متصل بنجاح بقاعدة بيانات Supabase 🟢';
+    } else {
+      statusDot.className = 'w-2.5 h-2.5 rounded-full bg-outline';
+      statusText.innerText = 'الحالة: غير متصل بعد (يعمل في الوضع المحلي) ⚪';
+    }
+  }
+
+  document.getElementById('supabaseConfigModal')?.classList.remove('hidden');
+}
+
+function closeSupabaseConfigModal() {
+  document.getElementById('supabaseConfigModal')?.classList.add('hidden');
+}
+
+function handleSaveSupabaseConfig(e) {
+  e.preventDefault();
+  const url = (document.getElementById('supabaseUrlInput')?.value || '').trim();
+  const key = (document.getElementById('supabaseKeyInput')?.value || '').trim();
+
+  const success = supabaseService.saveConfig(url, key);
+  if (success) {
+    showToast('تم الاتصال بنجاح بقاعدة بيانات Supabase! 🎉', 'verified');
+  } else {
+    showToast('تم حفظ الإعدادات، تأكد من صحة الرابط والمفتاح', 'info');
+  }
+
+  closeSupabaseConfigModal();
+  renderWorshipView();
+  renderLeaderboardView();
+}
+
 // ================= INITIAL RUN =================
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   initStorage();
   updateSyncButtonVisual();
+
+  // Listen to Supabase Auth state changes
+  supabaseService.onAuthStateChange((user, profile) => {
+    updateHeaderUserState(user, profile);
+  });
 
   const hash = window.location.hash.replace('#', '');
   if (SECTIONS.includes(hash)) {

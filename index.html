@@ -162,6 +162,9 @@
     })();
   </script>
 
+  <!-- Supabase CDN Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Tailwind CSS CDN & Config -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -245,17 +248,26 @@
         <button id="themeToggleBtn" onclick="toggleTheme()" title="تبديل المظهر (فاتح / داكن)" class="inline-flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary border border-surface-container-high shadow-2xs transition-all active:scale-95 cursor-pointer">
           <span class="material-symbols-outlined text-[19px]" id="themeToggleIcon">dark_mode</span>
         </button>
+        <button onclick="openSupabaseConfigModal()" title="إعدادات قاعدة بيانات Supabase والتنافس" class="inline-flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-secondary border border-surface-container-high shadow-2xs transition-all active:scale-95 cursor-pointer">
+          <span class="material-symbols-outlined text-[19px]">database</span>
+        </button>
+        <button id="headerSyncBtn" onclick="openSyncModal()" title="المزامنة السحابية (GitHub Sync)" class="relative inline-flex items-center justify-center w-8 h-8 sm:w-8.5 sm:h-8.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary border border-surface-container-high shadow-2xs transition-all active:scale-95 cursor-pointer">
+          <span class="material-symbols-outlined text-[19px]" id="headerSyncIcon">cloud_sync</span>
+          <span id="headerSyncDot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-outline"></span>
+        </button>
         <button onclick="navigateTo('misbaha')" title="المسبحة الإلكترونية" class="inline-flex items-center gap-1.5 bg-gradient-to-r from-primary to-secondary text-white hover:opacity-95 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-95">
           <span class="material-symbols-outlined text-[18px]">touch_app</span>
           <span>المسبحة</span>
         </button>
-        <button id="headerAddBtn" onclick="navigateTo('add')" class="hidden sm:inline-flex items-center gap-1.5 bg-primary text-on-primary hover:bg-primary-container px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all active:scale-95">
-          <span class="material-symbols-outlined text-[18px]">add</span>
-          <span>إضافة ذكر</span>
+        <!-- User Profile / Auth State Button -->
+        <button id="headerUserBtn" onclick="handleHeaderUserBtnClick()" class="inline-flex items-center gap-1.5 bg-primary text-on-primary hover:bg-primary-container px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all active:scale-95 cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]" id="headerUserIcon">account_circle</span>
+          <span id="headerUserName">تسجيل الدخول</span>
+          <span id="headerUserPointsBadge" class="hidden text-[10px] bg-secondary-container text-on-secondary-container font-bold px-1.5 py-0.5 rounded-full">0</span>
         </button>
-        <button onclick="navigateTo('categories')" title="أنواع الأذكار" class="inline-flex items-center gap-1.5 bg-surface-container-low text-primary hover:bg-surface-container border border-surface-container-high/80 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-95">
+        <button onclick="navigateTo('categories')" title="أنواع الأذكار" class="hidden md:inline-flex items-center gap-1.5 bg-surface-container-low text-primary hover:bg-surface-container border border-surface-container-high/80 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-95">
           <span class="material-symbols-outlined text-[18px] text-secondary">bookmarks</span>
-          <span>أنواع الأذكار</span>
+          <span>التصنيفات</span>
         </button>
       </div>
     </div>
@@ -361,38 +373,44 @@
       <!-- Quick Action Buttons -->
       <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-surface-container-high/40">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-headline font-bold text-on-surface">إجراءات الإدارة السريعة</h2>
-          <span class="text-xs text-outline">إضافة وتسبيح فوري</span>
+          <h2 class="text-sm font-headline font-bold text-on-surface">إجراءات سريعة وتنافس الطاعات</h2>
+          <span class="text-xs text-outline">نقاط يومية وأذكار</span>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <button onclick="navigateTo('misbaha')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-gradient-to-r from-primary to-secondary text-white shadow hover:opacity-95 active:scale-[0.99] transition-all">
+          <button onclick="navigateTo('worship')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-gradient-to-r from-primary to-primary-container text-white shadow hover:opacity-95 active:scale-[0.99] transition-all">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[20px]">touch_app</span>
-              <span class="text-xs font-bold">المسبحة الإلكترونية</span>
+              <span class="material-symbols-outlined text-[20px]">task_alt</span>
+              <div class="flex flex-col text-right">
+                <span class="text-xs font-bold leading-tight">الورد اليومي</span>
+                <span class="text-[10px] text-primary-fixed">تسجيل وحساب النقاط</span>
+              </div>
             </div>
             <span class="material-symbols-outlined text-[15px]">arrow_back_ios_new</span>
           </button>
 
-          <button onclick="navigateTo('add')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-primary text-on-primary shadow hover:bg-primary-container active:scale-[0.99] transition-all">
+          <button onclick="navigateTo('leaderboard')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-gradient-to-r from-secondary to-secondary-container text-white shadow hover:opacity-95 active:scale-[0.99] transition-all">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[20px]">add_circle</span>
-              <span class="text-xs font-semibold">إضافة ذكر جديد</span>
+              <span class="material-symbols-outlined text-[20px]">emoji_events</span>
+              <div class="flex flex-col text-right">
+                <span class="text-xs font-bold leading-tight">المتصدرون</span>
+                <span class="text-[10px] text-white/80">تنافس الأصدقاء</span>
+              </div>
             </div>
             <span class="material-symbols-outlined text-[15px]">arrow_back_ios_new</span>
           </button>
-          
-          <button onclick="navigateTo('categories')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all">
+
+          <button onclick="navigateTo('misbaha')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[20px] text-secondary">create_new_folder</span>
-              <span class="text-xs font-semibold">إدارة أنواع الأذكار</span>
+              <span class="material-symbols-outlined text-[20px] text-primary">touch_app</span>
+              <span class="text-xs font-semibold">المسبحة</span>
             </div>
             <span class="material-symbols-outlined text-[15px] text-outline">arrow_back_ios_new</span>
           </button>
 
-          <button onclick="openSyncModal()" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all">
+          <button onclick="navigateTo('add')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all">
             <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[20px] text-secondary">cloud_sync</span>
-              <span class="text-xs font-semibold">مزامنة سحابية</span>
+              <span class="material-symbols-outlined text-[20px] text-secondary">add_circle</span>
+              <span class="text-xs font-semibold">إضافة ذكر</span>
             </div>
             <span class="material-symbols-outlined text-[15px] text-outline">arrow_back_ios_new</span>
           </button>
@@ -926,6 +944,160 @@
       </div>
     </section>
 
+    <!-- ================= VIEW 5: DAILY WORSHIP TRACKER & GAMIFICATION ================= -->
+    <section id="viewWorship" class="space-y-6 hidden animate-fade-in">
+      <!-- Spiritual Progress Header Banner -->
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-l from-primary via-primary-container to-primary-container text-white p-5 sm:p-6 shadow-md border border-primary-fixed/20">
+        <div class="absolute -top-10 -left-10 w-44 h-44 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+        <div class="absolute -bottom-8 -right-8 w-40 h-40 rounded-full bg-secondary-fixed/15 blur-xl pointer-events-none"></div>
+
+        <div class="relative z-10 space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div class="inline-flex items-center gap-1.5 text-primary-fixed font-semibold text-xs mb-1">
+                <span class="material-symbols-outlined text-[16px]">verified</span>
+                <span>سجل العبادات والأوراد اليومية</span>
+              </div>
+              <h1 class="text-xl sm:text-2xl font-headline font-bold">الورد اليومي والتنافس في الطاعات</h1>
+              <p class="text-xs text-white/80 mt-1">«وَسَارِعُوا إِلَىٰ مَغْفِرَةٍ مِّن رَّبِّكُمْ وَجَنَّةٍ عَرْضُهَا السَّمَاوَاتُ وَالْأَرْضُ»</p>
+            </div>
+            <!-- Streak & Total Points Badges -->
+            <div class="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 backdrop-blur-md text-white border border-white/20 shadow-xs">
+                <span class="material-symbols-outlined text-[18px] text-amber-300">local_fire_department</span>
+                <span class="text-xs font-bold" id="worshipStreakDisplay">0 أيام متتالية</span>
+              </div>
+              <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/15 backdrop-blur-md text-white border border-white/20 shadow-xs">
+                <span class="material-symbols-outlined text-[18px] text-yellow-300">stars</span>
+                <span class="text-xs font-bold" id="worshipTotalPointsDisplay">0 نقطة</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Points Progress Bar -->
+          <div class="space-y-2 pt-2 border-t border-white/15">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-medium text-white/90">إنجاز اليوم: <span class="font-bold text-white" id="worshipPointsTodayText">0 / 155 نقطة</span></span>
+              <span class="font-bold text-primary-fixed" id="worshipProgressPercentText">0%</span>
+            </div>
+            <div class="w-full h-3 rounded-full bg-black/25 overflow-hidden p-0.5 border border-white/20">
+              <div id="worshipProgressBar" class="h-full rounded-full bg-gradient-to-r from-amber-300 to-emerald-400 transition-all duration-500 ease-out" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Guest / Offline Notice Banner (If not logged in) -->
+      <div id="worshipGuestNotice" class="hidden p-4 rounded-xl bg-surface-container-low border border-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-[20px]">cloud_off</span>
+          </div>
+          <div>
+            <div class="font-bold text-xs text-on-surface">أنت تستخدم التطبيق محلياً كضيف</div>
+            <div class="text-[11px] text-on-surface-variant">سجل دخولك مجاناً لمزامنة نقاطك وسلسلة أيامك والتنافس مع أصدقائك في لوحة المتصدرين.</div>
+          </div>
+        </div>
+        <button onclick="openAuthModal()" class="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container shrink-0 transition-all active:scale-95 shadow-xs">
+          تسجيل الدخول / حساب جديد
+        </button>
+      </div>
+
+      <!-- Categories Checklist -->
+      <div class="space-y-5" id="worshipChecklistContainer">
+        <!-- Rendered dynamically via JS: Prayers, Nawafil, Morning/Evening Adhkar, Quran, Sadaqah -->
+      </div>
+    </section>
+
+    <!-- ================= VIEW 6: SOCIAL LEADERBOARD & FRIENDS ================= -->
+    <section id="viewLeaderboard" class="space-y-6 hidden animate-fade-in">
+      <!-- Header Banner -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-container-lowest p-5 rounded-2xl shadow-sm border border-surface-container-high/60">
+        <div>
+          <div class="inline-flex items-center gap-1.5 text-secondary font-semibold text-xs mb-1">
+            <span class="material-symbols-outlined text-[16px]">emoji_events</span>
+            <span>التنافس في الصالحات</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-headline font-bold text-on-surface">لوحة المتصدرين وتنافس الأصدقاء</h1>
+          <p class="text-xs text-on-surface-variant mt-0.5">«وَفِي ذَٰلِكَ فَلْيَتَنَافَسِ الْمُتَنَافِسُونَ»</p>
+        </div>
+
+        <!-- My Friend Code Share Box -->
+        <div class="flex items-center gap-2 self-start sm:self-auto bg-surface-container-low p-2.5 rounded-xl border border-surface-container-high">
+          <div class="flex flex-col">
+            <span class="text-[10px] text-outline font-medium">كود صداقتك:</span>
+            <span class="font-mono font-bold text-sm text-primary" id="myFriendCodeDisplay">ADK-....</span>
+          </div>
+          <button onclick="copyMyFriendCode()" title="نسخ كود الصداقة ومشاركته" class="p-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary transition-all active:scale-95 cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">content_copy</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Friend Request Input Card -->
+      <div class="bg-surface-container-lowest p-4 rounded-xl shadow-sm border border-surface-container-high/60">
+        <form onsubmit="handleSendFriendRequestSubmit(event)" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <div class="relative flex-1">
+            <span class="material-symbols-outlined absolute right-3 top-2.5 text-outline text-[18px]">person_add</span>
+            <input id="addFriendCodeInput" type="text" placeholder="أدخل كود الصداقة لمنافسة صديقك (مثال: ADK-7A2B)" class="w-full bg-surface-container-low text-on-surface pr-9 pl-3 py-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-secondary uppercase font-mono" />
+          </div>
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-secondary text-white text-xs font-bold hover:bg-secondary/90 transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-xs shrink-0 cursor-pointer">
+            <span class="material-symbols-outlined text-[18px]">send</span>
+            <span>إرسال طلب الصداقة</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Pending Friend Requests Alert Banner (if any) -->
+      <div id="pendingRequestsContainer" class="hidden space-y-2">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Filter Controls: Scope & Timeframe -->
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface-container-low p-3 rounded-xl border border-surface-container-high/60">
+        <!-- Scope Tabs: Friends vs Global -->
+        <div class="flex items-center gap-1 bg-surface-container p-1 rounded-xl">
+          <button id="btnScopeFriends" onclick="setLeaderboardScope(true)" class="flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-lowest text-primary shadow-xs cursor-pointer">
+            👥 أصدقائي
+          </button>
+          <button id="btnScopeGlobal" onclick="setLeaderboardScope(false)" class="flex-1 sm:flex-initial px-4 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all cursor-pointer">
+            🌍 الترتيب العام
+          </button>
+        </div>
+
+        <!-- Timeframe Buttons: Today, Week, Month, All Time -->
+        <div class="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+          <button onclick="setLeaderboardTimeframe('today')" id="btnTfToday" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-white shadow-xs cursor-pointer">
+            اليوم
+          </button>
+          <button onclick="setLeaderboardTimeframe('week')" id="btnTfWeek" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-container text-on-surface-variant hover:bg-surface-container-high cursor-pointer">
+            هذا الأسبوع
+          </button>
+          <button onclick="setLeaderboardTimeframe('month')" id="btnTfMonth" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-container text-on-surface-variant hover:bg-surface-container-high cursor-pointer">
+            هذا الشهر
+          </button>
+          <button onclick="setLeaderboardTimeframe('all')" id="btnTfAll" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-container text-on-surface-variant hover:bg-surface-container-high cursor-pointer">
+            الكل
+          </button>
+        </div>
+      </div>
+
+      <!-- Podium Top 3 Display -->
+      <div id="leaderboardPodium" class="grid grid-cols-3 gap-2 sm:gap-4 items-end pt-4 pb-2">
+        <!-- Rendered dynamically via JS: 2nd, 1st, 3rd -->
+      </div>
+
+      <!-- Leaderboard List Table / Cards -->
+      <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-surface-container-high/60 overflow-hidden">
+        <div class="p-4 border-b border-surface-container-high flex items-center justify-between">
+          <span class="text-xs font-bold text-on-surface">جدول الترتيب والنقاط</span>
+          <span class="text-[11px] text-outline" id="leaderboardCountText">0 متسابق</span>
+        </div>
+        <div class="divide-y divide-surface-container" id="leaderboardListContainer">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
 
   </main>
 
@@ -938,10 +1110,10 @@
         <span class="text-[11px]">نظرة عامة</span>
       </button>
 
-      <!-- Tab 2: Adhkar -->
-      <button onclick="navigateTo('adhkar')" id="navTab-adhkar" class="nav-tab flex flex-col items-center justify-center gap-1 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-all">
-        <span class="material-symbols-outlined text-[22px]">menu_book</span>
-        <span class="text-[11px]">الأذكار</span>
+      <!-- Tab 2: Daily Worship -->
+      <button onclick="navigateTo('worship')" id="navTab-worship" class="nav-tab flex flex-col items-center justify-center gap-1 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-all">
+        <span class="material-symbols-outlined text-[22px]">task_alt</span>
+        <span class="text-[11px]">الورد اليومي</span>
       </button>
 
       <!-- Tab 3: Misbaha Centerpiece -->
@@ -952,16 +1124,16 @@
         <span class="text-[10px] font-bold">المسبحة</span>
       </button>
 
-      <!-- Tab 4: Add Dhikr -->
-      <button onclick="navigateTo('add')" id="navTab-add" class="nav-tab flex flex-col items-center justify-center gap-1 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-all">
-        <span class="material-symbols-outlined text-[22px]">add_circle</span>
-        <span class="text-[11px]">إضافة ذكر</span>
+      <!-- Tab 4: Leaderboard & Friends -->
+      <button onclick="navigateTo('leaderboard')" id="navTab-leaderboard" class="nav-tab flex flex-col items-center justify-center gap-1 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-all">
+        <span class="material-symbols-outlined text-[22px]">emoji_events</span>
+        <span class="text-[11px]">المتصدرون</span>
       </button>
 
-      <!-- Tab 5: Categories -->
-      <button onclick="navigateTo('categories')" id="navTab-categories" class="nav-tab flex flex-col items-center justify-center gap-1 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-all">
-        <span class="material-symbols-outlined text-[22px]">bookmarks</span>
-        <span class="text-[11px]">التصنيفات</span>
+      <!-- Tab 5: Adhkar -->
+      <button onclick="navigateTo('adhkar')" id="navTab-adhkar" class="nav-tab flex flex-col items-center justify-center gap-1 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-all">
+        <span class="material-symbols-outlined text-[22px]">menu_book</span>
+        <span class="text-[11px]">الأذكار</span>
       </button>
     </div>
   </nav>
@@ -1143,18 +1315,241 @@
     </div>
   </div>
 
+  <!-- ================= MODAL: AUTHENTICATION (SIGN IN / SIGN UP) ================= -->
+  <div id="authModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden animate-fade-in">
+    <div class="bg-surface-container-lowest rounded-2xl w-full max-w-md p-6 shadow-2xl border border-surface-container-high space-y-4">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-surface-container-high pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+            <span class="material-symbols-outlined text-[22px]">account_circle</span>
+          </div>
+          <div>
+            <h3 class="font-headline font-bold text-base text-on-surface" id="authModalTitle">تسجيل الدخول والتنافس</h3>
+            <p class="text-[11px] text-on-surface-variant">احفظ نقاطك ونافس أصدقاءك في الطاعات</p>
+          </div>
+        </div>
+        <button onclick="closeAuthModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Auth Mode Tabs -->
+      <div class="flex items-center bg-surface-container-low p-1 rounded-xl">
+        <button type="button" id="authTabSignIn" onclick="switchAuthTab('signin')" class="flex-1 py-2 text-xs font-bold rounded-lg bg-surface-container-lowest text-primary shadow-xs transition-all cursor-pointer">
+          تسجيل الدخول
+        </button>
+        <button type="button" id="authTabSignUp" onclick="switchAuthTab('signup')" class="flex-1 py-2 text-xs font-medium rounded-lg text-on-surface-variant hover:text-on-surface transition-all cursor-pointer">
+          حساب جديد
+        </button>
+      </div>
+
+      <!-- Auth Form -->
+      <form onsubmit="handleAuthSubmit(event)" class="space-y-3.5">
+        <!-- Display Name (for sign up only) -->
+        <div class="space-y-1 hidden" id="authNameField">
+          <label class="text-xs font-semibold text-on-surface">الاسم المعروض (الذي يراه أصدقاؤك):</label>
+          <input id="authNameInput" type="text" placeholder="مثال: مؤمن مهيب" class="w-full bg-surface-container-low text-on-surface px-3.5 py-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+        </div>
+
+        <!-- Email -->
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-on-surface">البريد الإلكتروني:</label>
+          <input id="authEmailInput" type="email" required placeholder="name@example.com" class="w-full bg-surface-container-low text-on-surface px-3.5 py-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary dir-ltr text-right" />
+        </div>
+
+        <!-- Password -->
+        <div class="space-y-1">
+          <label class="text-xs font-semibold text-on-surface">كلمة المرور:</label>
+          <input id="authPasswordInput" type="password" required minlength="6" placeholder="••••••••" class="w-full bg-surface-container-low text-on-surface px-3.5 py-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary dir-ltr text-right" />
+        </div>
+
+        <!-- Error Alert Box -->
+        <div id="authErrorBox" class="hidden p-3 rounded-xl bg-error/10 border border-error/20 text-error text-xs"></div>
+
+        <button type="submit" id="authSubmitBtn" class="w-full py-2.5 rounded-xl bg-primary text-white text-xs sm:text-sm font-bold hover:bg-primary-container shadow-sm transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">login</span>
+          <span id="authSubmitBtnText">دخول</span>
+        </button>
+      </form>
+
+      <!-- Supabase Configuration Hint & Quick Access -->
+      <div class="pt-2 border-t border-surface-container-high flex items-center justify-between text-xs">
+        <button type="button" onclick="closeAuthModal(); openSupabaseConfigModal();" class="text-secondary hover:underline font-medium flex items-center gap-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[15px]">settings</span>
+          <span>إعدادات ربط Supabase</span>
+        </button>
+        <button type="button" onclick="closeAuthModal()" class="text-outline hover:text-on-surface cursor-pointer">
+          المتابعة كضيف
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: USER PROFILE & FRIENDS ================= -->
+  <div id="profileModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden animate-fade-in">
+    <div class="bg-surface-container-lowest rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col shadow-2xl border border-surface-container-high overflow-hidden">
+      <!-- Profile Header -->
+      <div class="p-5 bg-gradient-to-l from-primary to-primary-container text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center font-bold text-xl border border-white/30" id="profileModalAvatar">
+            م
+          </div>
+          <div>
+            <h3 class="font-headline font-bold text-base" id="profileModalName">المستخدم</h3>
+            <p class="text-xs text-white/80" id="profileModalEmail">user@example.com</p>
+          </div>
+        </div>
+        <button onclick="closeProfileModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Profile Body (Scrollable) -->
+      <div class="p-5 overflow-y-auto space-y-4 text-xs">
+        <!-- Friend Code Card -->
+        <div class="p-3.5 rounded-xl bg-surface-container-low border border-surface-container-high flex items-center justify-between">
+          <div class="space-y-0.5">
+            <span class="text-[11px] text-outline">كود الصداقة الخاص بك:</span>
+            <div class="font-mono font-bold text-base text-primary" id="profileModalFriendCode">ADK-0000</div>
+          </div>
+          <button onclick="copyMyFriendCode()" class="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-bold flex items-center gap-1 cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">content_copy</span>
+            <span>نسخ</span>
+          </button>
+        </div>
+
+        <!-- Gamification Stats Badges -->
+        <div class="grid grid-cols-2 gap-2.5">
+          <div class="p-3 rounded-xl bg-surface-container-low border border-surface-container-high text-center">
+            <div class="text-[11px] text-outline mb-0.5">إجمالي النقاط</div>
+            <div class="font-headline font-bold text-lg text-primary" id="profileModalPoints">0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-surface-container-low border border-surface-container-high text-center">
+            <div class="text-[11px] text-outline mb-0.5">سلسلة الأيام (Streak)</div>
+            <div class="font-headline font-bold text-lg text-amber-500" id="profileModalStreak">🔥 0 يوم</div>
+          </div>
+        </div>
+
+        <!-- Friends List Section -->
+        <div class="space-y-2 pt-2 border-t border-surface-container-high">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-on-surface flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-secondary">group</span>
+              <span>قائمة الأصدقاء</span>
+            </span>
+            <span class="text-[11px] text-outline" id="profileFriendsCount">0 صديق</span>
+          </div>
+          <div class="space-y-1.5 max-h-40 overflow-y-auto" id="profileFriendsList">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Pending Requests Section (if any) -->
+        <div id="profilePendingSection" class="hidden space-y-2 pt-2 border-t border-surface-container-high">
+          <div class="font-bold text-on-surface flex items-center gap-1.5 text-amber-600">
+            <span class="material-symbols-outlined text-[16px]">notifications</span>
+            <span>طلبات الصداقة المعلقة</span>
+          </div>
+          <div class="space-y-1.5" id="profilePendingList">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Profile Footer -->
+      <div class="p-4 border-t border-surface-container-high bg-surface-container-low flex items-center justify-between">
+        <button onclick="closeProfileModal(); openSupabaseConfigModal();" class="text-xs text-secondary hover:underline font-semibold flex items-center gap-1 cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">database</span>
+          <span>إعدادات قاعدة البيانات</span>
+        </button>
+        <button onclick="handleSignOut()" class="px-4 py-2 rounded-xl bg-error/10 text-error hover:bg-error/20 font-bold text-xs flex items-center gap-1 transition-all cursor-pointer">
+          <span class="material-symbols-outlined text-[16px]">logout</span>
+          <span>تسجيل الخروج</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: SUPABASE CONFIGURATION ================= -->
+  <div id="supabaseConfigModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden animate-fade-in">
+    <div class="bg-surface-container-lowest rounded-2xl w-full max-w-lg flex flex-col shadow-2xl border border-surface-container-high overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-surface-container-high flex items-center justify-between bg-surface-container-low">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+            <span class="material-symbols-outlined text-[22px]">cloud_sync</span>
+          </div>
+          <div>
+            <h3 class="font-headline font-bold text-base text-primary">إعدادات قاعدة بيانات وتنافس Supabase</h3>
+            <p class="text-[11px] text-on-surface-variant">ربط مجاني مدى الحياة بدون تكلفة أو سيرفرات</p>
+          </div>
+        </div>
+        <button onclick="closeSupabaseConfigModal()" class="w-8 h-8 rounded-lg flex items-center justify-center text-outline hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <form onsubmit="handleSaveSupabaseConfig(event)" class="p-5 space-y-4 text-xs">
+        <!-- 3-step Quick Guide Alert -->
+        <div class="p-3.5 rounded-xl bg-surface-container-low border border-surface-container-high space-y-2">
+          <div class="font-bold text-on-surface flex items-center gap-1.5 text-primary">
+            <span class="material-symbols-outlined text-[16px]">lightbulb</span>
+            <span>كيف تجهز قاعدة بياناتك في دقيقتين مجاناً:</span>
+          </div>
+          <ol class="list-decimal list-inside space-y-1 text-[11px] text-on-surface-variant leading-relaxed">
+            <li>ادخل على موقع <a href="https://supabase.com" target="_blank" class="text-secondary font-bold underline">supabase.com</a> وأنشئ حساباً ومشروعاً مجانياً جديداً.</li>
+            <li>من القائمة الجانبية ادخل على <strong class="text-on-surface">SQL Editor</strong>، والصق محتوى ملف <span class="font-mono text-primary font-bold">supabase_schema.sql</span> الموجود في المستودع واضغط <strong>Run</strong>.</li>
+            <li>من <strong class="text-on-surface">Project Settings -> API</strong> انسخ رابط المشروع (Project URL) ومفتاح (anon public key) والصقهما بالأسفل.</li>
+          </ol>
+        </div>
+
+        <!-- Project URL -->
+        <div class="space-y-1">
+          <label class="font-semibold text-on-surface">رابط مشروع Supabase (Project URL):</label>
+          <input id="supabaseUrlInput" type="url" placeholder="https://xxxxxxxx.supabase.co" class="w-full bg-surface-container-low text-on-surface px-3 py-2.5 rounded-xl font-mono text-xs focus:outline-none focus:ring-2 focus:ring-primary dir-ltr text-right" />
+        </div>
+
+        <!-- Anon Key -->
+        <div class="space-y-1">
+          <label class="font-semibold text-on-surface">المفتاح العام (anon public key):</label>
+          <input id="supabaseKeyInput" type="password" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI..." class="w-full bg-surface-container-low text-on-surface px-3 py-2.5 rounded-xl font-mono text-xs focus:outline-none focus:ring-2 focus:ring-primary dir-ltr text-right" />
+        </div>
+
+        <!-- Status Indicator -->
+        <div id="supabaseConnectionStatus" class="p-3 rounded-xl border flex items-center gap-2 bg-surface-container-low border-surface-container-high">
+          <span class="w-2.5 h-2.5 rounded-full bg-outline" id="supabaseStatusDot"></span>
+          <span class="text-[11px] font-medium" id="supabaseStatusText">الحالة: غير متصل بعد (يعمل في الوضع المحلي)</span>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="pt-3 border-t border-surface-container-high flex items-center justify-between gap-2">
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all shadow-xs flex items-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">save</span>
+            <span>حفظ واختبار الاتصال</span>
+          </button>
+          <button type="button" onclick="closeSupabaseConfigModal()" class="px-4 py-2 rounded-xl text-xs font-medium text-on-surface-variant hover:bg-surface-container cursor-pointer">
+            إغلاق
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Toast Notification Feedback -->
   <div id="toastNotification" class="fixed bottom-20 left-4 right-4 max-w-sm mx-auto bg-primary text-on-primary px-4 py-3 rounded-2xl shadow-2xl flex items-center justify-between gap-3 transform translate-y-32 opacity-0 transition-all duration-300 pointer-events-none z-50 border border-primary-fixed/20">
     <div class="flex items-center gap-2">
       <span class="material-symbols-outlined text-primary-fixed text-[20px]" id="toastIcon">check_circle</span>
       <span class="text-xs font-semibold" id="toastMessage">تم الحفظ بنجاح</span>
     </div>
-    <button onclick="hideToast()" class="text-white/80 hover:text-white">
+    <button onclick="hideToast()" class="text-white/80 hover:text-white cursor-pointer">
       <span class="material-symbols-outlined text-[16px]">close</span>
     </button>
   </div>
 
   <!-- Load Application Logic -->
+  <script src="supabase-client.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
