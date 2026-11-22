@@ -101,10 +101,10 @@ const WORSHIP_TASKS = [
 
 const TOTAL_DAILY_MAX_POINTS = WORSHIP_TASKS.reduce((acc, t) => acc + t.points, 0); // 155 pts
 
-// Default Demo / Public Supabase config placeholder
+// Central Supabase Production Config (Client-Safe Publishable Key)
 const DEFAULT_SUPABASE_CONFIG = {
-  url: '',
-  anonKey: ''
+  url: 'https://chzzvopkxajurwkbdijq.supabase.co',
+  anonKey: 'sb_publishable_8lkNqSSfDjRzxhAbniPwmA_G8qaL6A2'
 };
 
 class SupabaseService {
@@ -674,3 +674,4 @@ class SupabaseService {
 
 // Global Singleton Instance
 window.supabaseService = new SupabaseService();
+

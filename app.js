@@ -3196,51 +3196,6 @@ function updateHeaderUserState(user, profile) {
   }
 }
 
-// ================= SUPABASE CONFIGURATION MODAL =================
-function openSupabaseConfigModal() {
-  const config = supabaseService.loadConfig();
-  const urlInput = document.getElementById('supabaseUrlInput');
-  const keyInput = document.getElementById('supabaseKeyInput');
-  const statusDot = document.getElementById('supabaseStatusDot');
-  const statusText = document.getElementById('supabaseStatusText');
-
-  if (urlInput) urlInput.value = config.url || '';
-  if (keyInput) keyInput.value = config.anonKey || '';
-
-  if (statusDot && statusText) {
-    if (supabaseService.isConfigured) {
-      statusDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500';
-      statusText.innerText = 'الحالة: متصل بنجاح بقاعدة بيانات Supabase 🟢';
-    } else {
-      statusDot.className = 'w-2.5 h-2.5 rounded-full bg-outline';
-      statusText.innerText = 'الحالة: غير متصل بعد (يعمل في الوضع المحلي) ⚪';
-    }
-  }
-
-  document.getElementById('supabaseConfigModal')?.classList.remove('hidden');
-}
-
-function closeSupabaseConfigModal() {
-  document.getElementById('supabaseConfigModal')?.classList.add('hidden');
-}
-
-function handleSaveSupabaseConfig(e) {
-  e.preventDefault();
-  const url = (document.getElementById('supabaseUrlInput')?.value || '').trim();
-  const key = (document.getElementById('supabaseKeyInput')?.value || '').trim();
-
-  const success = supabaseService.saveConfig(url, key);
-  if (success) {
-    showToast('تم الاتصال بنجاح بقاعدة بيانات Supabase! 🎉', 'verified');
-  } else {
-    showToast('تم حفظ الإعدادات، تأكد من صحة الرابط والمفتاح', 'info');
-  }
-
-  closeSupabaseConfigModal();
-  renderWorshipView();
-  renderLeaderboardView();
-}
-
 // ================= INITIAL RUN =================
 document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
