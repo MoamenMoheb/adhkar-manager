@@ -16,32 +16,32 @@ class AppConstants {
   static const Color cardLight = Colors.white;
   static const Color cardDark = Color(0xFF16202E);
 
-  // 10 Male Islamic Avatars (Faceless / بدون ملامح)
+  // 10 Male Islamic Avatars (3D Luxury Faceless / مختلف الأعمار والألوان)
   static const List<Map<String, String>> maleAvatars = [
-    {'id': 'm1', 'title': 'طاقية بيضاء وثوب أبيض', 'asset': 'assets/avatars/m1.svg'},
-    {'id': 'm2', 'title': 'شماغ أحمر وعقال وقور', 'asset': 'assets/avatars/m2.svg'},
-    {'id': 'm3', 'title': 'غترة بيضاء وثوب كحلي', 'asset': 'assets/avatars/m3.svg'},
-    {'id': 'm4', 'title': 'عمامة بيضاء إسلامية', 'asset': 'assets/avatars/m4.svg'},
-    {'id': 'm5', 'title': 'طاقية زيتونية وثوب كريمي', 'asset': 'assets/avatars/m5.svg'},
-    {'id': 'm6', 'title': 'شماغ كشميري داكن وعقال', 'asset': 'assets/avatars/m6.svg'},
-    {'id': 'm7', 'title': 'جلابة مغربية أصيلة', 'asset': 'assets/avatars/m7.svg'},
-    {'id': 'm8', 'title': 'ثوب أزرق ملكي وطاقية', 'asset': 'assets/avatars/m8.svg'},
-    {'id': 'm9', 'title': 'شماغ أحمر منسدل بهيبة', 'asset': 'assets/avatars/m9.svg'},
-    {'id': 'm10', 'title': 'عمامة خضراء مباركة', 'asset': 'assets/avatars/m10.svg'},
+    {'id': 'm1', 'title': 'شاب بطاقية بيضاء وثوب مطرز (زمردي)', 'asset': 'assets/avatars/m1.png'},
+    {'id': 'm2', 'title': 'رجل بشماغ أحمر وعقال وقور (غابي)', 'asset': 'assets/avatars/m2.png'},
+    {'id': 'm3', 'title': 'شيخ مسن بلحية فضية وعمامة (ياقوتي)', 'asset': 'assets/avatars/m3.png'},
+    {'id': 'm4', 'title': 'شاب بثوب كتاني بيج (عنبري)', 'asset': 'assets/avatars/m4.png'},
+    {'id': 'm5', 'title': 'رجل بشماغ كشميري أسود مذهب (فحمي)', 'asset': 'assets/avatars/m5.png'},
+    {'id': 'm6', 'title': 'طفل صغير بثوب تركواز مشرق (سماوي)', 'asset': 'assets/avatars/m6.png'},
+    {'id': 'm7', 'title': 'جد مسن بجلابة مغربية أصيلة (ترابي)', 'asset': 'assets/avatars/m7.png'},
+    {'id': 'm8', 'title': 'رجل بغترة بيضاء وثوب ملكي (أزرق)', 'asset': 'assets/avatars/m8.png'},
+    {'id': 'm9', 'title': 'شاب بثوب زيتي مطرز مع طاقية (زيتوني)', 'asset': 'assets/avatars/m9.png'},
+    {'id': 'm10', 'title': 'إمام وقور بعمامة خضراء ملكية (ذهبي)', 'asset': 'assets/avatars/m10.png'},
   ];
 
-  // 10 Female Islamic Avatars (Faceless / بدون ملامح)
+  // 10 Female Islamic Avatars (3D Luxury Faceless / منتقبات ومحجبات بمختلف الأعمار)
   static const List<Map<String, String>> femaleAvatars = [
-    {'id': 'f1', 'title': 'حجاب زمردي أنيق', 'asset': 'assets/avatars/f1.svg'},
-    {'id': 'f2', 'title': 'حجاب وردي هادئ', 'asset': 'assets/avatars/f2.svg'},
-    {'id': 'f3', 'title': 'حجاب تركواز مميز', 'asset': 'assets/avatars/f3.svg'},
-    {'id': 'f4', 'title': 'حجاب بيج دافئ وعباية', 'asset': 'assets/avatars/f4.svg'},
-    {'id': 'f5', 'title': 'حجاب كحلي ملكي راقٍ', 'asset': 'assets/avatars/f5.svg'},
-    {'id': 'f6', 'title': 'نقاب إسلامي وقور بدون ملامح', 'asset': 'assets/avatars/f6.svg'},
-    {'id': 'f7', 'title': 'خمار زيتي منسدل ناعم', 'asset': 'assets/avatars/f7.svg'},
-    {'id': 'f8', 'title': 'إسدال صلاة بنفسجي هادئ', 'asset': 'assets/avatars/f8.svg'},
-    {'id': 'f9', 'title': 'حجاب لؤلؤي أبيض فاخر', 'asset': 'assets/avatars/f9.svg'},
-    {'id': 'f10', 'title': 'حجاب عنابي داكن أنيق', 'asset': 'assets/avatars/f10.svg'},
+    {'id': 'f1', 'title': 'شابة بحجاب زمردي مطرز بالذهب', 'asset': 'assets/avatars/f1.png'},
+    {'id': 'f2', 'title': 'سيدة منتقبة بنقاب أسود ملكي مذهب', 'asset': 'assets/avatars/f2.png'},
+    {'id': 'f3', 'title': 'شابة منتقبة بنقاب كحلي بتطريز فضي', 'asset': 'assets/avatars/f3.png'},
+    {'id': 'f4', 'title': 'فتاة صغيرة بحجاب وردي ناعم', 'asset': 'assets/avatars/f4.png'},
+    {'id': 'f5', 'title': 'سيدة بحجاب بيج موكا دافئ وعباية', 'asset': 'assets/avatars/f5.png'},
+    {'id': 'f6', 'title': 'أم/جدة مسنة بإسدال صلاة أبيض ناصع', 'asset': 'assets/avatars/f6.png'},
+    {'id': 'f7', 'title': 'شابة بحجاب عنابي ملكي وعباية داكنة', 'asset': 'assets/avatars/f7.png'},
+    {'id': 'f8', 'title': 'سيدة منتقبة بنقاب أسود وهالة زمردية', 'asset': 'assets/avatars/f8.png'},
+    {'id': 'f9', 'title': 'سيدة بحجاب تركواز حريري هادئ', 'asset': 'assets/avatars/f9.png'},
+    {'id': 'f10', 'title': 'شابة بحجاب لؤلؤي أبيض مذهب للأعياد', 'asset': 'assets/avatars/f10.png'},
   ];
 
   static List<Map<String, String>> getAllAvatars() => [...maleAvatars, ...femaleAvatars];

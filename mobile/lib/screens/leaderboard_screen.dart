@@ -182,16 +182,33 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               ),
                             ),
                             child: ListTile(
-                              leading: CircleAvatar(
-                                radius: 20,
-                                backgroundColor: idx == 0 ? Colors.amber : (idx == 1 ? Colors.grey[400] : (idx == 2 ? Colors.brown[300] : Colors.grey[200])),
-                                child: Text(
-                                  '${item.rank}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: idx < 3 ? Colors.black : Colors.grey[800],
+                              leading: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 13,
+                                    backgroundColor: idx == 0 ? Colors.amber : (idx == 1 ? Colors.grey[400] : (idx == 2 ? Colors.brown[300] : Colors.grey[200])),
+                                    child: Text(
+                                      '${item.rank}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: idx < 3 ? Colors.black : Colors.grey[800],
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  const SizedBox(width: 8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(18),
+                                    child: Image.asset(
+                                      'assets/avatars/${item.avatarId}.png',
+                                      width: 36,
+                                      height: 36,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 36),
+                                    ),
+                                  ),
+                                ],
                               ),
                               title: Row(
                                 children: [

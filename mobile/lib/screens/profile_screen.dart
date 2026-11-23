@@ -61,7 +61,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     Navigator.pop(context);
                                     setState(() {});
                                   },
-                                  child: SvgPicture.asset(av['asset']!, width: 70, height: 70),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(35),
+                                    child: Image.asset(av['asset']!, width: 70, height: 70, fit: BoxFit.cover),
+                                  ),
                                 );
                               },
                             ),
@@ -81,7 +84,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     Navigator.pop(context);
                                     setState(() {});
                                   },
-                                  child: SvgPicture.asset(av['asset']!, width: 70, height: 70),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(35),
+                                    child: Image.asset(av['asset']!, width: 70, height: 70, fit: BoxFit.cover),
+                                  ),
                                 );
                               },
                             ),
@@ -143,10 +149,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: _showAvatarPicker,
                   child: Stack(
                     children: [
-                      SvgPicture.asset(
-                        'assets/avatars/${profile?.avatarId ?? "m1"}.svg',
-                        width: 90,
-                        height: 90,
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(45),
+                        child: Image.asset(
+                          'assets/avatars/${profile?.avatarId ?? "m1"}.png',
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                       Positioned(
                         bottom: 0,
