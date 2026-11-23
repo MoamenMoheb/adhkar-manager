@@ -1,40 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <clipPath id="circleClip_f7">
+    <clipPath id="clip_f7">
       <circle cx="64" cy="64" r="60" />
     </clipPath>
+    <radialGradient id="grad_f7" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#064E3B" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#064E3B" />
+    </radialGradient>
   </defs>
-  <!-- Background -->
-  <circle cx="64" cy="64" r="60" fill="#006A61" />
-  <g clip-path="url(#circleClip_f7)">
-    <!-- Abaya Shoulder -->
-    <path d="M16 128 Q64 88 112 128 Z" fill="#2D4A3E" />
+  <circle cx="64" cy="64" r="60" fill="url(#grad_f7)" />
+  <g clip-path="url(#clip_f7)">
+    <path d="M12 128 C18 96, 38 88, 64 88 C90 88, 110 96, 116 128 Z" fill="#022C22" />
     
-    <!-- Outer Hijab Back Wrap -->
-    <path d="M30 65 Q30 25 64 25 Q98 25 98 65 Q102 110 64 116 Q26 110 30 65 Z" fill="#2D4A3E" />
-    <!-- Under-cap (Bandana) -->
-    <ellipse cx="64" cy="50" rx="19" ry="14" fill="#F9F6F0" />
-    
-    <!-- Face -->
-    <ellipse cx="64" cy="65" rx="18" ry="21" fill="#E5A872" />
-    
-    <!-- Hijab Inner Framing -->
-    <path d="M45 54 Q64 45 83 54 Q83 78 64 86 Q45 78 45 54 Z" fill="none" stroke="#2D4A3E" stroke-width="5" />
-    
-    <!-- Eyes (Almond Shaped & Kohl) -->
-    <ellipse cx="56" cy="63" rx="3" ry="3.5" fill="#1C1917" />
-    <ellipse cx="72" cy="63" rx="3" ry="3.5" fill="#1C1917" />
-    <circle cx="57" cy="62" r="1" fill="#FFFFFF" />
-    <circle cx="73" cy="62" r="1" fill="#FFFFFF" />
-    <path d="M52 58 Q56 55 60 57" stroke="#1C1917" stroke-width="2" stroke-linecap="round" fill="none" />
-    <path d="M68 57 Q72 55 76 58" stroke="#1C1917" stroke-width="2" stroke-linecap="round" fill="none" />
-    
-    <!-- Nose & Smile -->
-    <path d="M64 64 L63 69 L65 69" stroke="#9A3412" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6" />
-    <path d="M60 75 Q64 78 68 75" stroke="#9A3412" stroke-width="1.5" stroke-linecap="round" fill="none" />
-    
-    <!-- Hijab Neck Drape -->
-    <path d="M42 84 Q64 96 86 84 Q78 118 64 120 Q50 118 42 84 Z" fill="#2D4A3E" />
-    <path d="M46 88 Q64 98 82 88" stroke="#F9F6F0" stroke-width="1.5" fill="none" opacity="0.6" />
+        <path d="M22 66 C20 24, 108 24, 106 66 C110 106, 96 128, 64 128 C32 128, 18 106, 22 66 Z" fill="#047857" />
+        <ellipse cx="64" cy="46" rx="17" ry="13" fill="#A7F3D0" />
+        <ellipse cx="64" cy="62" rx="15" ry="18" fill="#F5DDC7" />
+        <path d="M47 50 C64 44, 81 44, 81 50 C81 72, 73 82, 64 84 C55 82, 47 72, 47 50 Z" fill="none" stroke="#047857" stroke-width="5" />
+        <path d="M32 94 C48 106, 80 106, 96 94" stroke="#FFFFFF" stroke-width="1.2" fill="none" opacity="0.25" />
+        
   </g>
 </svg>
