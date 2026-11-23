@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -34,13 +34,15 @@ jobs:
 
       - name: Ensure Gradle Wrapper in Android
         run: |
-          cd mobile
-          if [ ! -f "android/gradlew" ]; then
-            echo "Gradle wrapper script missing; copying template from Flutter SDK..."
-            cp -r "$FLUTTER_ROOT/packages/flutter_tools/templates/app/android.tmpl/gradle"* android/ || true
-            chmod +x android/gradlew || true
+          if [ ! -f "mobile/android/gradlew" ] || [ ! -f "mobile/android/gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Extracting official Gradle wrapper using flutter create..."
+            flutter create --platforms android /tmp/temp_flutter_app
+            cp /tmp/temp_flutter_app/android/gradlew mobile/android/
+            cp -r /tmp/temp_flutter_app/android/gradle mobile/android/
+            chmod +x mobile/android/gradlew
           fi
-          ls -la android/
+          ls -la mobile/android/
+          ls -la mobile/android/gradle/wrapper/
 
       - name: Install Flutter Dependencies
         run: |
@@ -75,3 +77,4 @@ jobs:
             --title "تطبيق أذكار - الإصدار 1.0.0 (Adhkar Sanctuary APK)" \
             --notes "تطبيق أذكار الهادئ - أندرويد APK جاهز للتحميل والتثبيت المباشر على الهاتف. يتضمن: لوحة المتصدرين المفصولة للرجال والنساء، 20 صورة رمزية إسلامية، المسبحة الإلكترونية، والورد اليومي مع إدارة الصلاحيات للمشرف والمستخدم العادي." \
             --latest
+
