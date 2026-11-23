@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     display_name TEXT NOT NULL,
     avatar_url TEXT DEFAULT '',
     friend_code TEXT UNIQUE NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
+    privacy_level TEXT NOT NULL DEFAULT 'public' CHECK (privacy_level IN ('public', 'friends', 'private')),
     total_points BIGINT DEFAULT 0,
     streak_count INT DEFAULT 0,
     last_active_date DATE DEFAULT CURRENT_DATE,
@@ -17,8 +19,13 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure columns exist if table was already created
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS privacy_level TEXT NOT NULL DEFAULT 'public';
+
 -- Index for friend code lookup
 CREATE INDEX IF NOT EXISTS idx_profiles_friend_code ON public.profiles(friend_code);
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
 
 -- 2. Daily Worship Logs Table
 CREATE TABLE IF NOT EXISTS public.daily_worship_logs (
@@ -103,6 +110,47 @@ CREATE POLICY "Users can delete friendship"
     ON public.friendships FOR DELETE
     USING (auth.uid() = user_id OR auth.uid() = friend_id);
 
+-- Helper function to check if current user is admin
+CREATE OR REPLACE FUNCTION public.auth_is_admin()
+RETURNS BOOLEAN AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = auth.uid() AND role = 'admin'
+    );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- 4. Central Adhkar Table (Admin managed, public read)
+CREATE TABLE IF NOT EXISTS public.adhkar (
+    id TEXT PRIMARY KEY,
+    admin_title TEXT NOT NULL,
+    text TEXT NOT NULL,
+    category TEXT NOT NULL,
+    repeats INT NOT NULL DEFAULT 1,
+    virtue TEXT DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'draft')),
+    hadiths JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.adhkar ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public can view active adhkar" ON public.adhkar;
+CREATE POLICY "Public can view active adhkar" ON public.adhkar
+    FOR SELECT USING (status = 'active' OR public.auth_is_admin());
+
+DROP POLICY IF EXISTS "Admins can insert adhkar" ON public.adhkar;
+CREATE POLICY "Admins can insert adhkar" ON public.adhkar
+    FOR INSERT WITH CHECK (public.auth_is_admin());
+
+DROP POLICY IF EXISTS "Admins can update adhkar" ON public.adhkar;
+CREATE POLICY "Admins can update adhkar" ON public.adhkar
+    FOR UPDATE USING (public.auth_is_admin());
+
+DROP POLICY IF EXISTS "Admins can delete adhkar" ON public.adhkar;
+CREATE POLICY "Admins can delete adhkar" ON public.adhkar
+    FOR DELETE USING (public.auth_is_admin());
+
 -- ==============================================================================
 -- Triggers & Auto Profile Provisioning
 -- ==============================================================================
@@ -111,14 +159,24 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
     new_code TEXT;
+    user_role TEXT;
+    user_count INT;
 BEGIN
+    -- Check if first user in database -> promote to admin automatically
+    SELECT COUNT(*) INTO user_count FROM public.profiles;
+    IF user_count = 0 THEN
+        user_role := 'admin';
+    ELSE
+        user_role := COALESCE(NEW.raw_user_meta_data->>'role', 'user');
+    END IF;
+
     -- Generate unique friend code (e.g. ADK-7A2B)
     LOOP
         new_code := 'ADK-' || UPPER(SUBSTRING(MD5(RANDOM()::TEXT) FROM 1 FOR 4));
         EXIT WHEN NOT EXISTS (SELECT 1 FROM public.profiles WHERE friend_code = new_code);
     END LOOP;
 
-    INSERT INTO public.profiles (id, email, display_name, avatar_url, friend_code)
+    INSERT INTO public.profiles (id, email, display_name, avatar_url, friend_code, role, privacy_level)
     VALUES (
         NEW.id,
         NEW.email,
@@ -132,7 +190,9 @@ BEGIN
             NEW.raw_user_meta_data->>'picture',
             ''
         ),
-        new_code
+        new_code,
+        user_role,
+        'public'
     );
     RETURN NEW;
 END;
@@ -218,6 +278,7 @@ RETURNS TABLE (
     display_name TEXT,
     avatar_url TEXT,
     friend_code TEXT,
+    role TEXT,
     points BIGINT,
     streak_count INT,
     rank BIGINT,
@@ -243,6 +304,7 @@ BEGIN
             p.display_name,
             p.avatar_url,
             p.friend_code,
+            p.role,
             p.streak_count,
             COALESCE(SUM(l.points), 0)::BIGINT AS period_points,
             EXISTS (
@@ -258,21 +320,38 @@ BEGIN
             ON l.user_id = p.id 
             AND l.log_date >= start_date
         WHERE 
-            (NOT p_only_friends OR p.id = p_user_id OR EXISTS (
-                SELECT 1 FROM public.friendships f
-                WHERE f.status = 'accepted'
-                AND (
-                    (f.user_id = p_user_id AND f.friend_id = p.id) OR
-                    (f.friend_id = p_user_id AND f.user_id = p.id)
+            -- Privacy Filter:
+            -- 1. User always sees themselves
+            -- 2. If private, nobody else sees them
+            -- 3. If friends only, only accepted friends see them
+            -- 4. If public, everyone sees them (or friends only if p_only_friends is requested)
+            (
+                p.id = p_user_id
+                OR (
+                    p.privacy_level = 'public' 
+                    AND (NOT p_only_friends OR EXISTS (
+                        SELECT 1 FROM public.friendships f
+                        WHERE f.status = 'accepted'
+                        AND ((f.user_id = p_user_id AND f.friend_id = p.id) OR (f.friend_id = p_user_id AND f.user_id = p.id))
+                    ))
                 )
-            ))
-        GROUP BY p.id, p.display_name, p.avatar_url, p.friend_code, p.streak_count
+                OR (
+                    p.privacy_level = 'friends' 
+                    AND EXISTS (
+                        SELECT 1 FROM public.friendships f
+                        WHERE f.status = 'accepted'
+                        AND ((f.user_id = p_user_id AND f.friend_id = p.id) OR (f.friend_id = p_user_id AND f.user_id = p.id))
+                    )
+                )
+            )
+        GROUP BY p.id, p.display_name, p.avatar_url, p.friend_code, p.role, p.streak_count
     )
     SELECT 
         up.id,
         up.display_name,
         up.avatar_url,
         up.friend_code,
+        up.role,
         up.period_points,
         up.streak_count,
         DENSE_RANK() OVER (ORDER BY up.period_points DESC, up.id ASC) AS rank,

@@ -3150,7 +3150,59 @@ async function openProfileModal() {
     }
   }
 
+  // Update Role Badge
+  const roleBadge = document.getElementById('profileModalRoleBadge');
+  if (roleBadge) {
+    if (profile?.role === 'admin') {
+      roleBadge.innerText = '⭐ مسؤول (Admin)';
+      roleBadge.className = 'text-[10px] bg-amber-400 text-amber-950 font-bold px-2 py-0.5 rounded-full';
+    } else {
+      roleBadge.innerText = 'عضو';
+      roleBadge.className = 'text-[10px] bg-white/20 text-white font-bold px-2 py-0.5 rounded-full';
+    }
+  }
+
+  // Update Privacy UI
+  updatePrivacyButtonsUI(supabaseService.getPrivacyLevel());
+
   document.getElementById('profileModal')?.classList.remove('hidden');
+}
+
+function updatePrivacyButtonsUI(level) {
+  const levels = ['public', 'friends', 'private'];
+  levels.forEach(lvl => {
+    const btn = document.getElementById(`btnPrivacy${lvl.charAt(0).toUpperCase() + lvl.slice(1)}`);
+    if (btn) {
+      if (lvl === level) {
+        btn.className = 'py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-lowest text-primary shadow-xs cursor-pointer';
+      } else {
+        btn.className = 'py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all cursor-pointer';
+      }
+    }
+  });
+
+  const notice = document.getElementById('privacyNoticeText');
+  if (notice) {
+    if (level === 'public') {
+      notice.innerText = 'نقاطك وترتيبك يظهران للجميع في لوحة الصدارة العامة.';
+    } else if (level === 'friends') {
+      notice.innerText = 'نقاطك وترتيبك يظهران لأصدقائك المقبولين فقط.';
+    } else {
+      notice.innerText = 'نقاطك سرية تماماً ولن تظهر لأحد في أي لوحة صدارة.';
+    }
+  }
+}
+
+async function handleSetPrivacy(level) {
+  try {
+    await supabaseService.updatePrivacyLevel(level);
+    updatePrivacyButtonsUI(level);
+    const label = level === 'public' ? 'عام' : (level === 'friends' ? 'للأصدقاء فقط' : 'خاص');
+    showToast(`تم تحديث الخصوصية: ${label}`, 'verified');
+    renderLeaderboardView();
+  } catch (err) {
+    showToast('حدث خطأ في تحديث الخصوصية', 'error');
+  }
 }
 
 function closeProfileModal() {
@@ -3181,10 +3233,21 @@ function updateHeaderUserState(user, profile) {
   const nameEl = document.getElementById('headerUserName');
   const iconEl = document.getElementById('headerUserIcon');
   const badgeEl = document.getElementById('headerUserPointsBadge');
+  const isAdmin = supabaseService.isAdmin();
+
+  // Admin controls visibility
+  document.querySelectorAll('.admin-only').forEach(el => {
+    if (isAdmin) {
+      el.classList.remove('hidden');
+    } else {
+      el.classList.add('hidden');
+    }
+  });
 
   if (user) {
-    if (nameEl) nameEl.innerText = profile?.display_name || user.email?.split('@')[0] || 'حسابي';
-    if (iconEl) iconEl.innerText = 'account_circle';
+    const rolePrefix = isAdmin ? '⭐ ' : '';
+    if (nameEl) nameEl.innerText = rolePrefix + (profile?.display_name || user.email?.split('@')[0] || 'حسابي');
+    if (iconEl) iconEl.innerText = isAdmin ? 'admin_panel_settings' : 'account_circle';
     if (badgeEl) {
       badgeEl.classList.remove('hidden');
       badgeEl.innerText = `${profile?.total_points || 0} ن`;

@@ -404,7 +404,7 @@
             <span class="material-symbols-outlined text-[15px] text-outline">arrow_back_ios_new</span>
           </button>
 
-          <button onclick="navigateTo('add')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all">
+          <button onclick="navigateTo('add')" class="admin-only hidden flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all">
             <div class="flex items-center gap-2">
               <span class="material-symbols-outlined text-[20px] text-secondary">add_circle</span>
               <span class="text-xs font-semibold">إضافة ذكر</span>
@@ -929,7 +929,7 @@
           <h1 class="text-xl sm:text-2xl font-headline font-bold text-on-surface">إدارة أنواع وتصنيفات الأذكار</h1>
           <p class="text-xs sm:text-sm text-on-surface-variant">إضافة وتعديل الأبواب الشرعية والأوقات المخصصة للأذكار</p>
         </div>
-        <button onclick="openCategoryModal()" class="bg-secondary text-white hover:bg-secondary/90 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all shrink-0">
+        <button onclick="openCategoryModal()" class="admin-only hidden bg-secondary text-white hover:bg-secondary/90 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all shrink-0">
           <span class="material-symbols-outlined text-[18px]">create_new_folder</span>
           <span>إضافة نوع جديد</span>
         </button>
@@ -1205,7 +1205,7 @@
 
       <!-- Modal Footer -->
       <div class="p-4 border-t border-surface-container-high bg-surface-container-low flex items-center justify-between">
-        <button id="detailModalEditBtn" class="px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-primary-container">
+        <button id="detailModalEditBtn" class="admin-only hidden px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-primary-container">
           <span class="material-symbols-outlined text-[16px]">edit</span>
           <span>تعديل هذا الذكر</span>
         </button>
@@ -1393,7 +1393,10 @@
             م
           </div>
           <div>
-            <h3 class="font-headline font-bold text-base" id="profileModalName">المستخدم</h3>
+            <div class="flex items-center gap-2">
+              <h3 class="font-headline font-bold text-base" id="profileModalName">المستخدم</h3>
+              <span id="profileModalRoleBadge" class="text-[10px] bg-white/20 text-white font-bold px-2 py-0.5 rounded-full">عضو</span>
+            </div>
             <p class="text-xs text-white/80" id="profileModalEmail">user@example.com</p>
           </div>
         </div>
@@ -1426,6 +1429,28 @@
             <div class="text-[11px] text-outline mb-0.5">سلسلة الأيام (Streak)</div>
             <div class="font-headline font-bold text-lg text-amber-500" id="profileModalStreak">🔥 0 يوم</div>
           </div>
+        </div>
+
+        <!-- Progress Privacy Setting -->
+        <div class="p-3.5 rounded-xl bg-surface-container-low border border-surface-container-high space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-on-surface flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-secondary">visibility</span>
+              <span>خصوصية إنجازك في لوحة الصدارة:</span>
+            </span>
+          </div>
+          <div class="grid grid-cols-3 gap-1 bg-surface-container p-1 rounded-xl">
+            <button type="button" id="btnPrivacyPublic" onclick="handleSetPrivacy('public')" class="py-1.5 rounded-lg text-xs font-bold transition-all bg-surface-container-lowest text-primary shadow-xs cursor-pointer">
+              🌍 عام
+            </button>
+            <button type="button" id="btnPrivacyFriends" onclick="handleSetPrivacy('friends')" class="py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all cursor-pointer">
+              👥 أصدقائي
+            </button>
+            <button type="button" id="btnPrivacyPrivate" onclick="handleSetPrivacy('private')" class="py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:text-on-surface transition-all cursor-pointer">
+              🔒 خاص
+            </button>
+          </div>
+          <p class="text-[10px] text-outline" id="privacyNoticeText">نقاطك وترتيبك يظهران للجميع في لوحة الصدارة العامة.</p>
         </div>
 
         <!-- Friends List Section -->

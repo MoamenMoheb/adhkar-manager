@@ -218,6 +218,8 @@ class SupabaseService {
           display_name: this.currentUser.user_metadata?.display_name || this.currentUser.email?.split('@')[0] || 'مستخدم',
           avatar_url: this.currentUser.user_metadata?.avatar_url || '',
           friend_code: 'ADK-' + this.currentUser.id.substring(0, 4).toUpperCase(),
+          role: this.currentUser.user_metadata?.role || 'user',
+          privacy_level: 'public',
           total_points: 0,
           streak_count: 0
         };
@@ -229,6 +231,30 @@ class SupabaseService {
       console.error('Profile fetch exception:', e);
       return null;
     }
+  }
+
+  isAdmin() {
+    return this.currentProfile?.role === 'admin';
+  }
+
+  getPrivacyLevel() {
+    return this.currentProfile?.privacy_level || 'public';
+  }
+
+  async updatePrivacyLevel(level) {
+    if (!['public', 'friends', 'private'].includes(level)) level = 'public';
+    if (!this.client || !this.currentUser) {
+      if (this.currentProfile) this.currentProfile.privacy_level = level;
+      return true;
+    }
+    const { error } = await this.client
+      .from('profiles')
+      .update({ privacy_level: level, updated_at: new Date().toISOString() })
+      .eq('id', this.currentUser.id);
+    if (error) throw error;
+    if (this.currentProfile) this.currentProfile.privacy_level = level;
+    this.notifyAuthListeners();
+    return true;
   }
 
   // ================= AUTH METHODS =================
