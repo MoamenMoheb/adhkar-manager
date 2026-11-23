@@ -32,17 +32,24 @@ jobs:
       - name: Verify Flutter Installation
         run: flutter doctor -v
 
-      - name: Ensure Gradle Wrapper in Android
+      - name: Prepare Android Project
         run: |
-          if [ ! -f "mobile/android/gradlew" ] || [ ! -f "mobile/android/gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Extracting official Gradle wrapper using flutter create..."
-            flutter create --platforms android /tmp/temp_flutter_app
-            cp /tmp/temp_flutter_app/android/gradlew mobile/android/
-            cp -r /tmp/temp_flutter_app/android/gradle mobile/android/
-            chmod +x mobile/android/gradlew
-          fi
-          ls -la mobile/android/
-          ls -la mobile/android/gradle/wrapper/
+          cd mobile
+          # Back up our manifest and icons
+          cp android/app/src/main/AndroidManifest.xml /tmp/AndroidManifest.xml
+          mkdir -p /tmp/res_backup
+          cp -r android/app/src/main/res/* /tmp/res_backup/ || true
+
+          # Recreate Android scaffolding with Flutter's official matching Gradle/AGP config
+          rm -rf android
+          flutter create --platforms android --org com.moamenmoheb .
+
+          # Restore our custom AndroidManifest and icons
+          cp /tmp/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          cp -r /tmp/res_backup/* android/app/src/main/res/
+
+          # Ensure gradlew has executable permissions
+          chmod +x android/gradlew
 
       - name: Install Flutter Dependencies
         run: |
@@ -77,4 +84,3 @@ jobs:
             --title "تطبيق أذكار - الإصدار 1.0.0 (Adhkar Sanctuary APK)" \
             --notes "تطبيق أذكار الهادئ - أندرويد APK جاهز للتحميل والتثبيت المباشر على الهاتف. يتضمن: لوحة المتصدرين المفصولة للرجال والنساء، 20 صورة رمزية إسلامية، المسبحة الإلكترونية، والورد اليومي مع إدارة الصلاحيات للمشرف والمستخدم العادي." \
             --latest
-
