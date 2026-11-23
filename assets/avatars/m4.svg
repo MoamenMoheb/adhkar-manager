@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <clipPath id="circleClip_m4">
+      <circle cx="64" cy="64" r="60" />
+    </clipPath>
+  </defs>
+  <!-- Background -->
+  <circle cx="64" cy="64" r="60" fill="#122030" />
+  <g clip-path="url(#circleClip_m4)">
+    <!-- Thobe / Body -->
+    <path d="M20 128 Q64 96 108 128 L108 128 L20 128 Z" fill="#FFFFFF" />
+    <!-- Collar -->
+    <path d="M52 102 Q64 112 76 102 Q64 94 52 102 Z" fill="#FFFFFF" opacity="0.3" />
+    <!-- Neck -->
+    <rect x="56" y="80" width="16" height="24" rx="4" fill="#F3C293" />
+    <!-- Ears -->
+    <circle cx="41" cy="67" r="6" fill="#F3C293" />
+    <circle cx="87" cy="67" r="6" fill="#F3C293" />
+    <!-- Head -->
+    <ellipse cx="64" cy="65" rx="23" ry="26" fill="#F3C293" />
+    <!-- Eyes & Brows -->
+    <ellipse cx="55" cy="62" rx="2.5" ry="3" fill="#1C1917" />
+    <ellipse cx="73" cy="62" rx="2.5" ry="3" fill="#1C1917" />
+    <circle cx="56" cy="61" r="0.8" fill="#FFFFFF" />
+    <circle cx="74" cy="61" r="0.8" fill="#FFFFFF" />
+    <path d="M50 56 Q55 53 60 56" stroke="#1C1917" stroke-width="2" stroke-linecap="round" fill="none" />
+    <path d="M68 56 Q73 53 78 56" stroke="#1C1917" stroke-width="2" stroke-linecap="round" fill="none" />
+    <!-- Nose -->
+    <path d="M64 63 L62 70 L66 70" stroke="#78350F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6" />
+    <!-- Smile -->
+    <path d="M59 76 Q64 80 69 76" stroke="#78350F" stroke-width="1.5" stroke-linecap="round" fill="none" />
+    <!-- Trimmed Beard -->
+    <path d="M45 68 Q48 88 64 92 Q80 88 83 68 Q74 76 64 76 Q54 76 45 68 Z" fill="#382315" />
+    <path d="M57 73 Q64 72 71 73 Q64 75 57 73 Z" fill="#382315" />
+    <!-- White Ghutra -->
+    <path d="M34 52 Q34 30 64 30 Q94 30 94 52 L100 105 Q64 90 28 105 Z" fill="#F9F6F0" />
+    <!-- Black Agal -->
+    <path d="M37 45 Q64 36 91 45" stroke="#1C1917" stroke-width="5" stroke-linecap="round" fill="none" />
+    <path d="M39 50 Q64 42 89 50" stroke="#1C1917" stroke-width="4" stroke-linecap="round" fill="none" />
+  </g>
+</svg>

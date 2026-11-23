@@ -1,0 +1,21 @@
+# Flutter / Dart
+.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+
+# Android build outputs
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/local.properties
+**/android/.gradle/
+dist/
+
+# Archives & Temporary files
+*.zip
+stitch_serene_adhkar_sanctuary_flutter_app/
+.DS_Store
+Thumbs.db

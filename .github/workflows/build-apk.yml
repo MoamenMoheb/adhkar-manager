@@ -1,0 +1,77 @@
+name: Build and Release Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build Flutter APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Verify Flutter Installation
+        run: flutter doctor -v
+
+      - name: Ensure Gradle Wrapper in Android
+        run: |
+          cd mobile
+          if [ ! -f "android/gradlew" ]; then
+            echo "Gradle wrapper script missing; copying template from Flutter SDK..."
+            cp -r "$FLUTTER_ROOT/packages/flutter_tools/templates/app/android.tmpl/gradle"* android/ || true
+            chmod +x android/gradlew || true
+          fi
+          ls -la android/
+
+      - name: Install Flutter Dependencies
+        run: |
+          cd mobile
+          flutter pub get
+
+      - name: Build Android Release APK
+        run: |
+          cd mobile
+          flutter build apk --release
+
+      - name: Prepare APK Output
+        run: |
+          mkdir -p dist
+          cp mobile/build/app/outputs/flutter-apk/app-release.apk dist/adhkar-sanctuary-v1.0.0.apk
+          ls -lh dist/
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: adhkar-sanctuary-apk
+          path: dist/adhkar-sanctuary-v1.0.0.apk
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete v1.0.0 --yes || true
+          git tag -d v1.0.0 || true
+          gh release create v1.0.0 dist/adhkar-sanctuary-v1.0.0.apk \
+            --title "تطبيق أذكار - الإصدار 1.0.0 (Adhkar Sanctuary APK)" \
+            --notes "تطبيق أذكار الهادئ - أندرويد APK جاهز للتحميل والتثبيت المباشر على الهاتف. يتضمن: لوحة المتصدرين المفصولة للرجال والنساء، 20 صورة رمزية إسلامية، المسبحة الإلكترونية، والورد اليومي مع إدارة الصلاحيات للمشرف والمستخدم العادي." \
+            --latest

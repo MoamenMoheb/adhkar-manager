@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <clipPath id="circleClip_m9">
+      <circle cx="64" cy="64" r="60" />
+    </clipPath>
+  </defs>
+  <!-- Background -->
+  <circle cx="64" cy="64" r="60" fill="#064E3B" />
+  <g clip-path="url(#circleClip_m9)">
+    <!-- Thobe / Body -->
+    <path d="M20 128 Q64 96 108 128 L108 128 L20 128 Z" fill="#FFFFFF" />
+    <!-- Collar -->
+    <path d="M52 102 Q64 112 76 102 Q64 94 52 102 Z" fill="#FFFFFF" opacity="0.3" />
+    <!-- Neck -->
+    <rect x="56" y="80" width="16" height="24" rx="4" fill="#FCD7B0" />
+    <!-- Ears -->
+    <circle cx="41" cy="67" r="6" fill="#FCD7B0" />
+    <circle cx="87" cy="67" r="6" fill="#FCD7B0" />
+    <!-- Head -->
+    <ellipse cx="64" cy="65" rx="23" ry="26" fill="#FCD7B0" />
+    <!-- Eyes & Brows -->
+    <ellipse cx="55" cy="62" rx="2.5" ry="3" fill="#1C1917" />
+    <ellipse cx="73" cy="62" rx="2.5" ry="3" fill="#1C1917" />
+    <circle cx="56" cy="61" r="0.8" fill="#FFFFFF" />
+    <circle cx="74" cy="61" r="0.8" fill="#FFFFFF" />
+    <path d="M50 56 Q55 53 60 56" stroke="#1C1917" stroke-width="2" stroke-linecap="round" fill="none" />
+    <path d="M68 56 Q73 53 78 56" stroke="#1C1917" stroke-width="2" stroke-linecap="round" fill="none" />
+    <!-- Nose -->
+    <path d="M64 63 L62 70 L66 70" stroke="#78350F" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.6" />
+    <!-- Smile -->
+    <path d="M59 76 Q64 80 69 76" stroke="#78350F" stroke-width="1.5" stroke-linecap="round" fill="none" />
+    <!-- White Kufi / Taqiyah -->
+    <path d="M41 55 Q41 34 64 34 Q87 34 87 55 Q64 50 41 55 Z" fill="#FFFFFF" />
+    <path d="M41 54 Q64 49 87 54" stroke="#D5E6E4" stroke-width="2" fill="none" />
+    <line x1="64" y1="34" x2="64" y2="52" stroke="#D5E6E4" stroke-width="1" stroke-dasharray="2,2" />
+  </g>
+</svg>

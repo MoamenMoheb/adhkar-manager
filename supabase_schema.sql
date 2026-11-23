@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     email TEXT,
     display_name TEXT NOT NULL,
     avatar_url TEXT DEFAULT '',
+    avatar_id TEXT DEFAULT 'm1',
+    gender TEXT NOT NULL DEFAULT 'male' CHECK (gender IN ('male', 'female')),
     friend_code TEXT UNIQUE NOT NULL,
     role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
     privacy_level TEXT NOT NULL DEFAULT 'public' CHECK (privacy_level IN ('public', 'friends', 'private')),
@@ -22,10 +24,13 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 -- Ensure columns exist if table was already created
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS privacy_level TEXT NOT NULL DEFAULT 'public';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS gender TEXT NOT NULL DEFAULT 'male';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_id TEXT DEFAULT 'm1';
 
 -- Index for friend code lookup
 CREATE INDEX IF NOT EXISTS idx_profiles_friend_code ON public.profiles(friend_code);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_gender ON public.profiles(gender);
 
 -- 2. Daily Worship Logs Table
 CREATE TABLE IF NOT EXISTS public.daily_worship_logs (
@@ -176,7 +181,7 @@ BEGIN
         EXIT WHEN NOT EXISTS (SELECT 1 FROM public.profiles WHERE friend_code = new_code);
     END LOOP;
 
-    INSERT INTO public.profiles (id, email, display_name, avatar_url, friend_code, role, privacy_level)
+    INSERT INTO public.profiles (id, email, display_name, avatar_url, friend_code, role, privacy_level, gender, avatar_id)
     VALUES (
         NEW.id,
         NEW.email,
@@ -192,7 +197,9 @@ BEGIN
         ),
         new_code,
         user_role,
-        'public'
+        'public',
+        COALESCE(NEW.raw_user_meta_data->>'gender', 'male'),
+        COALESCE(NEW.raw_user_meta_data->>'avatar_id', CASE WHEN COALESCE(NEW.raw_user_meta_data->>'gender', 'male') = 'female' THEN 'f1' ELSE 'm1' END)
     );
     RETURN NEW;
 END;
@@ -271,12 +278,15 @@ CREATE TRIGGER trg_update_points_insert
 CREATE OR REPLACE FUNCTION public.get_leaderboard(
     p_timeframe TEXT DEFAULT 'today',
     p_user_id UUID DEFAULT NULL,
-    p_only_friends BOOLEAN DEFAULT FALSE
+    p_only_friends BOOLEAN DEFAULT FALSE,
+    p_gender TEXT DEFAULT NULL
 )
 RETURNS TABLE (
     user_id UUID,
     display_name TEXT,
     avatar_url TEXT,
+    avatar_id TEXT,
+    gender TEXT,
     friend_code TEXT,
     role TEXT,
     points BIGINT,
@@ -303,6 +313,8 @@ BEGIN
             p.id,
             p.display_name,
             p.avatar_url,
+            p.avatar_id,
+            p.gender,
             p.friend_code,
             p.role,
             p.streak_count,
@@ -320,6 +332,11 @@ BEGIN
             ON l.user_id = p.id 
             AND l.log_date >= start_date
         WHERE 
+            -- Gender Filter (Separate Male and Female Global Dashboards):
+            -- In Friends Mode (p_only_friends = true), users see all their accepted friends.
+            -- In Global Mode (p_only_friends = false), dashboard is strictly separated by gender!
+            (p_only_friends OR p_gender IS NULL OR p.gender = p_gender)
+            AND
             -- Privacy Filter:
             -- 1. User always sees themselves
             -- 2. If private, nobody else sees them
@@ -344,12 +361,14 @@ BEGIN
                     )
                 )
             )
-        GROUP BY p.id, p.display_name, p.avatar_url, p.friend_code, p.role, p.streak_count
+        GROUP BY p.id, p.display_name, p.avatar_url, p.avatar_id, p.gender, p.friend_code, p.role, p.streak_count
     )
     SELECT 
         up.id,
         up.display_name,
         up.avatar_url,
+        up.avatar_id,
+        up.gender,
         up.friend_code,
         up.role,
         up.period_points,
