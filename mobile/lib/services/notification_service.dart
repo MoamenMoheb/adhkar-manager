@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,23 +15,30 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
-  /// Holds `'morning'` or `'evening'` when a user taps an Adhkar notification.
-  final ValueNotifier<String?> pendingMisbahaMode = ValueNotifier<String?>(null);
+  /// Payload captured on cold-launch from a notification tap.
+  String? initialLaunchPayload;
 
-  /// Holds `'fajr'`, `'sunrise'`, `'dhuhr'`, `'asr'`, `'maghrib'`, or `'isha'` when a prayer notification is tapped.
-  final ValueNotifier<String?> pendingPrayerKey = ValueNotifier<String?>(null);
+  /// Broadcast stream for notification taps while app is running or in background.
+  final StreamController<String> _tapStreamController = StreamController<String>.broadcast();
+  Stream<String> get onNotificationTap => _tapStreamController.stream;
 
   static const String _prefMonThuEnabled = 'notif_mon_thu_enabled';
   static const String _prefAyyamBeedEnabled = 'notif_ayyam_beed_enabled';
   static const String _prefMorningAdhkarEnabled = 'notif_morning_adhkar_enabled';
   static const String _prefEveningAdhkarEnabled = 'notif_evening_adhkar_enabled';
+  static const String _prefFixedPrayerNotif = 'notif_fixed_prayer_enabled';
   static const String _prefEveningHour = 'notif_evening_hour';
   static const String _prefEveningMinute = 'notif_evening_minute';
   static const String _prefHijriOffset = 'hijri_date_offset';
   static const String _prefCityKey = 'sun_times_city_key';
-  static const String _prefPrayerSoundMode = 'prayer_sound_mode'; // 'azan', 'takbeer', 'default'
+  static const String _prefPrayerSoundMode = 'prayer_sound_mode';
   static const String _prefPrayerMethodKey = 'prayer_method_key';
   static const String _prefHanafiAsr = 'prayer_hanafi_asr';
+
+  static const int _ongoingPrayerNotifId = 8888;
+  static const String _ongoingChannelId = 'adhkar_ongoing_salah_v1';
+  static const String _ongoingChannelName = 'إشعار الصلاة القادمة الدائم';
+  static const String _ongoingChannelDesc = 'يعرض الصلاة القادمة والعد التنازلي في شريط الإشعارات';
 
   static const String _fastingChannelId = 'adhkar_fasting_reminders';
   static const String _fastingChannelName = 'تذكير صيام التطوع والأيام البيض';
@@ -40,7 +48,6 @@ class NotificationService {
   static const String _adhkarChannelName = 'تذكير أذكار الصباح والمساء';
   static const String _adhkarChannelDesc = 'تنبيهات تلقائية قبل الشروق بنصف ساعة وقبل المغرب بنصف ساعة';
 
-  // Separate channel IDs per sound so Android OS never caches the wrong sound
   static const String _prayerAzanChannelId = 'adhkar_prayer_azan_v1';
   static const String _prayerTakbeerChannelId = 'adhkar_prayer_takbeer_v1';
   static const String _prayerDefaultChannelId = 'adhkar_prayer_default_v1';
@@ -62,14 +69,20 @@ class NotificationService {
     await _plugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        _handlePayload(response.payload);
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          _tapStreamController.add(payload);
+        }
       },
     );
 
     try {
       final launchDetails = await _plugin.getNotificationAppLaunchDetails();
       if (launchDetails?.didNotificationLaunchApp == true) {
-        _handlePayload(launchDetails?.notificationResponse?.payload);
+        final payload = launchDetails?.notificationResponse?.payload;
+        if (payload != null && payload.isNotEmpty) {
+          initialLaunchPayload = payload;
+        }
       }
     } catch (e) {
       debugPrint('Launch details check notice: $e');
@@ -77,17 +90,6 @@ class NotificationService {
 
     _initialized = true;
     await scheduleAllReminders();
-  }
-
-  void _handlePayload(String? payload) {
-    if (payload == null || payload.isEmpty) return;
-    if (payload == 'misbaha:morning') {
-      pendingMisbahaMode.value = 'morning';
-    } else if (payload == 'misbaha:evening') {
-      pendingMisbahaMode.value = 'evening';
-    } else if (payload.startsWith('prayer:')) {
-      pendingPrayerKey.value = payload.substring('prayer:'.length);
-    }
   }
 
   Future<bool> requestPermissions() async {
@@ -118,6 +120,17 @@ class NotificationService {
   Future<bool> isEveningAdhkarEnabled() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_prefEveningAdhkarEnabled) ?? true;
+  }
+
+  Future<bool> isFixedPrayerNotifEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_prefFixedPrayerNotif) ?? true;
+  }
+
+  Future<void> setFixedPrayerNotifEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefFixedPrayerNotif, enabled);
+    await updateOngoingPrayerNotification();
   }
 
   Future<bool> isPrayerNotifEnabled(String prayerKey) async {
@@ -225,10 +238,73 @@ class NotificationService {
     return null;
   }
 
-  /// Schedules:
-  /// 1) 5 Daily Prayers + Sunrise notifications (with Azan, Takbeer, or Default sound)
-  /// 2) Morning Adhkar (30m before Shuruq) & Evening Adhkar (30m before Maghrib)
-  /// 3) Fasting reminders (Monday, Thursday, and 13/14/15 Hijri)
+  String _fmtTime12(DateTime dt) {
+    final h = dt.hour;
+    final m = dt.minute.toString().padLeft(2, '0');
+    final period = h >= 12 ? 'م' : 'ص';
+    final h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h);
+    return '$h12:$m $period';
+  }
+
+  /// Displays / refreshes a pinned ongoing notification showing the next Salah, its exact time,
+  /// and a live native Android Chronometer countdown.
+  Future<void> updateOngoingPrayerNotification() async {
+    if (!_initialized) return;
+    try {
+      final enabled = await isFixedPrayerNotifEnabled();
+      if (!enabled) {
+        await _plugin.cancel(_ongoingPrayerNotifId);
+        return;
+      }
+
+      final city = SunTimesCalculator.getCityByKey(await getSelectedCityKey());
+      final method = PrayerTimesCalculator.getMethodByKey(await getPrayerMethodKey(), cityKey: city.key);
+      final hanafi = await isHanafiAsr();
+      final now = DateTime.now();
+      final next = PrayerTimesCalculator.getNextPrayer(
+        now: now,
+        city: city,
+        method: method,
+        hanafiAsr: hanafi,
+      );
+
+      final label = next.isFardPrayer ? 'صلاة ${next.nameAr}' : next.nameAr;
+      final title = '🕌 القادم: $label (${_fmtTime12(next.time)})';
+      final body = '${city.nameAr} • المتبقي للأذان';
+
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          _ongoingChannelId,
+          _ongoingChannelName,
+          channelDescription: _ongoingChannelDesc,
+          importance: Importance.low,
+          priority: Priority.low,
+          ongoing: true,
+          autoCancel: false,
+          onlyAlertOnce: true,
+          playSound: false,
+          enableVibration: false,
+          usesChronometer: true,
+          chronometerCountDown: true,
+          showWhen: true,
+          when: next.time.millisecondsSinceEpoch,
+          icon: '@mipmap/ic_launcher',
+        ),
+        iOS: const DarwinNotificationDetails(presentSound: false),
+      );
+
+      await _plugin.show(
+        _ongoingPrayerNotifId,
+        title,
+        body,
+        details,
+        payload: 'prayer:${next.key}',
+      );
+    } catch (e) {
+      debugPrint('Failed to update ongoing prayer notification: $e');
+    }
+  }
+
   Future<void> scheduleAllReminders() async {
     if (!_initialized) return;
 
@@ -279,14 +355,13 @@ class NotificationService {
           if (prayerFlags[entry.key] != true) continue;
           if (!entry.time.isAfter(now)) continue;
 
-          // Sunrise uses gentle Takbeer/Default (no full Adhan for sunrise, since sunrise is not a fard salah)
           final effectiveMode = entry.key == 'sunrise' && soundMode == 'azan' ? 'takbeer' : soundMode;
           final title = entry.isFardPrayer
               ? '🕌 حان الآن موعد صلاة ${entry.nameAr}'
               : '☀️ حان الآن وقت الشروق (${city.nameAr})';
           final body = entry.isFardPrayer
-              ? 'حيّ على الصلاة، حيّ على الفلاح • ${city.nameAr} (${entry.time.hour.toString().padLeft(2, '0')}:${entry.time.minute.toString().padLeft(2, '0')})'
-              : 'انتهى وقت الفجر وأشرقت الشمس • لا تنسَ صلاة الضحى بعد قليل';
+              ? 'حيّ على الصلاة، حيّ على الفلاح • ${_fmtTime12(entry.time)}'
+              : 'انتهى وقت الفجر وأشرقت الشمس';
 
           await _scheduleOne(
             id: prayerNotifId++,
@@ -302,7 +377,7 @@ class NotificationService {
         }
       }
 
-      // 2. Schedule Morning (30m before Shuruq) & Evening (30m before Maghrib) Adhkar for next 20 days
+      // 2. Schedule Morning (30m before Shuruq) & Evening (30m before Maghrib) Adhkar — HEADER ONLY (no points body)
       if (morningAdhkarOn || eveningAdhkarOn) {
         for (int i = 0; i <= 20; i++) {
           final targetDay = today.add(Duration(days: i));
@@ -312,8 +387,8 @@ class NotificationService {
             await _scheduleOne(
               id: adhkarNotifId++,
               scheduledLocal: sun.morningAdhkarReminder,
-              title: '☀️ أذكار الصباح (قبل الشروق بنصف ساعة)',
-              body: 'اضغط لفتح المسبحة مع أذكار الصباح • تُسجّل تلقائياً (+١٥ نقطة) في الورد اليومي',
+              title: '☀️ أذكار الصباح',
+              body: null,
               channelId: _adhkarChannelId,
               channelName: _adhkarChannelName,
               channelDesc: _adhkarChannelDesc,
@@ -325,8 +400,8 @@ class NotificationService {
             await _scheduleOne(
               id: adhkarNotifId++,
               scheduledLocal: sun.eveningAdhkarReminder,
-              title: '🌙 أذكار المساء (قبل المغرب بنصف ساعة)',
-              body: 'اضغط لفتح المسبحة مع أذكار المساء • تُسجّل تلقائياً (+١٥ نقطة) في الورد اليومي',
+              title: '🌙 أذكار المساء',
+              body: null,
               channelId: _adhkarChannelId,
               channelName: _adhkarChannelName,
               channelDesc: _adhkarChannelDesc,
@@ -367,7 +442,7 @@ class NotificationService {
               id: fastingNotifId++,
               scheduledLocal: eveLocal,
               title: '🌙 تذكير بصيام غداً: $reasonStr',
-              body: '«تُعرض الأعمال يوم الإثنين والخميس» • لا تنسَ تبييت نية الصيام والاستعداد للسحور.',
+              body: 'لا تنسَ تبييت نية الصيام والاستعداد للسحور.',
               channelId: _fastingChannelId,
               channelName: _fastingChannelName,
               channelDesc: _fastingChannelDesc,
@@ -380,7 +455,7 @@ class NotificationService {
               id: fastingNotifId++,
               scheduledLocal: morningLocal,
               title: '☀️ اليوم صيام سُنّة: $reasonStr',
-              body: 'تقبل الله صيامك! يمكنك تسجيل صيام اليوم في الورد اليومي لكسب النقاط الإضافية.',
+              body: 'تقبل الله صيامك.',
               channelId: _fastingChannelId,
               channelName: _fastingChannelName,
               channelDesc: _fastingChannelDesc,
@@ -388,6 +463,9 @@ class NotificationService {
           }
         }
       }
+
+      // Refresh ongoing Salah notification after cancelAll
+      await updateOngoingPrayerNotification();
 
       debugPrint('Scheduled ${prayerNotifId - 3000} prayer, ${adhkarNotifId - 2000} adhkar, ${fastingNotifId - 1000} fasting reminders.');
     } catch (e) {
@@ -399,7 +477,7 @@ class NotificationService {
     required int id,
     required DateTime scheduledLocal,
     required String title,
-    required String body,
+    String? body,
     required String channelId,
     required String channelName,
     required String channelDesc,
@@ -467,7 +545,7 @@ class NotificationService {
     await _plugin.show(
       9999,
       '🌙 تذكير الصيام والتقويم الهجري مفعل!',
-      'التاريخ اليوم: ${hijri.formattedArabic}. سيتم تنبيهك تلقائياً لصيام الإثنين والخميس والأيام البيض.',
+      'التاريخ اليوم: ${hijri.formattedArabic}',
       details,
     );
   }
@@ -489,12 +567,11 @@ class NotificationService {
       iOS: DarwinNotificationDetails(),
     );
 
+    // Header only — no points body text
     await _plugin.show(
       isMorning ? 9991 : 9992,
-      isMorning ? '☀️ حان موعد أذكار الصباح' : '🌙 حان موعد أذكار المساء',
-      isMorning
-          ? 'اضغط هنا لفتح المسبحة مباشرة على أذكار الصباح (+١٥ نقطة عند الإتمام)'
-          : 'اضغط هنا لفتح المسبحة مباشرة على أذكار المساء (+١٥ نقطة عند الإتمام)',
+      isMorning ? '☀️ أذكار الصباح' : '🌙 أذكار المساء',
+      null,
       details,
       payload: 'misbaha:$mode',
     );
@@ -524,8 +601,8 @@ class NotificationService {
       9993,
       '🕌 تجربة إشعار الأذان (${city.nameAr})',
       mode == 'azan'
-          ? 'تسمع الآن صوت أذان الحرم المكي عند دخول وقت الصلاة'
-          : (mode == 'takbeer' ? 'تسمع الآن تكبيرة الأذان المختصرة' : 'صوت تنبيهات النظام الافتراضي'),
+          ? 'صوت أذان الحرم المكي عند دخول وقت الصلاة'
+          : (mode == 'takbeer' ? 'تكبيرة الأذان المختصرة' : 'صوت تنبيهات النظام الافتراضي'),
       details,
       payload: 'prayer:dhuhr',
     );

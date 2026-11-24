@@ -42,24 +42,28 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
+    final selectedBg = AppConstants.accentBg(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('لوحة المتصدرين', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
+        title: Text('لوحة المتصدرين', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
       ),
       body: Column(
         children: [
-          // Scope Tabs: Friends vs Global
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 Expanded(
                   child: ChoiceChip(
-                    label: const Center(child: Text('👥 أصدقائي')),
+                    label: Center(child: Text('👥 أصدقائي', style: TextStyle(color: _onlyFriends ? Colors.white : secondaryTxt, fontWeight: FontWeight.bold))),
                     selected: _onlyFriends,
-                    selectedColor: AppConstants.primary,
-                    labelStyle: TextStyle(color: _onlyFriends ? Colors.white : null, fontWeight: FontWeight.bold),
+                    selectedColor: selectedBg,
+                    backgroundColor: AppConstants.cardSurface(context),
+                    side: BorderSide(color: AppConstants.borderColor(context)),
                     onSelected: (val) {
                       setState(() => _onlyFriends = true);
                       _loadLeaderboard();
@@ -69,10 +73,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ChoiceChip(
-                    label: const Center(child: Text('🌍 الترتيب العام')),
+                    label: Center(child: Text('🌍 الترتيب العام', style: TextStyle(color: !_onlyFriends ? Colors.white : secondaryTxt, fontWeight: FontWeight.bold))),
                     selected: !_onlyFriends,
-                    selectedColor: AppConstants.primary,
-                    labelStyle: TextStyle(color: !_onlyFriends ? Colors.white : null, fontWeight: FontWeight.bold),
+                    selectedColor: selectedBg,
+                    backgroundColor: AppConstants.cardSurface(context),
+                    side: BorderSide(color: AppConstants.borderColor(context)),
                     onSelected: (val) {
                       setState(() => _onlyFriends = false);
                       _loadLeaderboard();
@@ -83,16 +88,15 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             ),
           ),
 
-          // SEPARATE GENDER DASHBOARD TABS (Male vs Female)
           if (!_onlyFriends) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
+                  color: AppConstants.cardSurface(context),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  border: Border.all(color: AppConstants.borderColor(context)),
                 ),
                 child: Row(
                   children: [
@@ -105,14 +109,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: _selectedGender == 'male' ? AppConstants.primary : Colors.transparent,
+                            color: _selectedGender == 'male' ? selectedBg : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Center(
                             child: Text(
                               '🚹 المتصدرون (رجال)',
                               style: TextStyle(
-                                color: _selectedGender == 'male' ? Colors.white : null,
+                                color: _selectedGender == 'male' ? Colors.white : secondaryTxt,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
                               ),
@@ -130,14 +134,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 8),
                           decoration: BoxDecoration(
-                            color: _selectedGender == 'female' ? AppConstants.secondary : Colors.transparent,
+                            color: _selectedGender == 'female' ? selectedBg : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Center(
                             child: Text(
                               '🚺 المتصدرات (نساء)',
                               style: TextStyle(
-                                color: _selectedGender == 'female' ? Colors.white : null,
+                                color: _selectedGender == 'female' ? Colors.white : secondaryTxt,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
                               ),
@@ -154,7 +158,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
           const SizedBox(height: 12),
 
-          // Leaderboard Entries
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -162,7 +165,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ? Center(
                         child: Text(
                           _onlyFriends ? 'لم تضف أصدقاء بعد للتنافس معهم' : 'لا يوجد متنافسون في هذه القائمة',
-                          style: const TextStyle(color: Colors.grey),
+                          style: TextStyle(color: secondaryTxt),
                         ),
                       )
                     : ListView.builder(
@@ -174,12 +177,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           return Card(
                             margin: const EdgeInsets.only(bottom: 10),
                             elevation: 0,
-                            color: isMe ? AppConstants.primary.withOpacity(0.08) : null,
+                            color: isMe ? AppConstants.activeSurface(context) : AppConstants.cardSurface(context),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(
-                                color: isMe ? AppConstants.primary.withOpacity(0.4) : Colors.grey.withOpacity(0.2),
-                              ),
+                              side: BorderSide(color: AppConstants.borderColor(context)),
                             ),
                             child: ListTile(
                               leading: Row(
@@ -187,13 +188,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 13,
-                                    backgroundColor: idx == 0 ? Colors.amber : (idx == 1 ? Colors.grey[400] : (idx == 2 ? Colors.brown[300] : Colors.grey[200])),
+                                    backgroundColor: idx == 0 ? Colors.white : AppConstants.activeSurface(context),
                                     child: Text(
                                       '${item.rank}',
                                       style: TextStyle(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: idx < 3 ? Colors.black : Colors.grey[800],
+                                        color: idx == 0 ? Colors.black : primaryTxt,
                                       ),
                                     ),
                                   ),
@@ -212,21 +213,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               ),
                               title: Row(
                                 children: [
-                                  Text(item.displayName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  Text(item.displayName, style: TextStyle(fontWeight: FontWeight.bold, color: primaryTxt)),
                                   if (isMe) ...[
                                     const SizedBox(width: 6),
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                      decoration: BoxDecoration(color: AppConstants.primary, borderRadius: BorderRadius.circular(4)),
+                                      decoration: BoxDecoration(color: selectedBg, borderRadius: BorderRadius.circular(4)),
                                       child: const Text('أنت', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                                     ),
                                   ],
                                 ],
                               ),
-                              subtitle: Text('🔥 ${item.streakCount} يوم متتالي', style: const TextStyle(fontSize: 12, color: Colors.orange)),
+                              subtitle: Text('🔥 ${item.streakCount} يوم متتالي', style: TextStyle(fontSize: 12, color: secondaryTxt)),
                               trailing: Text(
                                 '${item.points} نقطة',
-                                style: const TextStyle(fontWeight: FontWeight.bold, color: AppConstants.primary, fontSize: 14),
+                                style: TextStyle(fontWeight: FontWeight.bold, color: primaryTxt, fontSize: 14),
                               ),
                             ),
                           );

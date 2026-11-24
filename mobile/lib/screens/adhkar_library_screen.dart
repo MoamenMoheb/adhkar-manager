@@ -15,7 +15,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
   final SupabaseService _service = SupabaseService.instance;
   List<DhikrModel> _adhkar = [];
   String _selectedCategory = 'all';
-  String _morningEveningSubFilter = 'all'; // 'all', 'morning', 'evening'
+  String _morningEveningSubFilter = 'all';
   String _searchQuery = '';
   bool _loading = true;
   final Map<String, int> _localCounters = {};
@@ -75,9 +75,13 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
+    final selectedBg = AppConstants.accentBg(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('مكتبة الأذكار والأحاديث', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
+        title: Text('مكتبة الأذكار والأحاديث', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -88,7 +92,6 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
       ),
       body: Column(
         children: [
-          // Search Box
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
             child: TextField(
@@ -96,13 +99,13 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                 hintText: 'ابحث في متن الذكر أو فضله أو الحديث...',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
+                fillColor: AppConstants.cardSurface(context),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
               ),
               onChanged: (val) => setState(() => _searchQuery = val),
             ),
           ),
 
-          // Categories Filter Tabs
           SizedBox(
             height: 40,
             child: ListView.separated(
@@ -114,10 +117,17 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                 final cat = _categories[idx];
                 final isSelected = _selectedCategory == cat['id'];
                 return ChoiceChip(
-                  label: Text(cat['name']!),
+                  label: Text(
+                    cat['name']!,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : secondaryTxt,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
                   selected: isSelected,
-                  selectedColor: AppConstants.primary,
-                  labelStyle: TextStyle(color: isSelected ? Colors.white : null, fontWeight: FontWeight.bold),
+                  selectedColor: selectedBg,
+                  backgroundColor: AppConstants.cardSurface(context),
+                  side: BorderSide(color: AppConstants.borderColor(context)),
                   onSelected: (_) => setState(() {
                     _selectedCategory = cat['id']!;
                     _morningEveningSubFilter = 'all';
@@ -127,7 +137,6 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
             ),
           ),
 
-          // Sub-filter for Morning vs Evening when morning_evening is selected
           if (_selectedCategory == 'morning_evening') ...[
             const SizedBox(height: 8),
             Padding(
@@ -136,30 +145,48 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                 children: [
                   Expanded(
                     child: ChoiceChip(
-                      label: const Center(child: Text('الكل')),
+                      label: Center(
+                        child: Text(
+                          'الكل',
+                          style: TextStyle(color: _morningEveningSubFilter == 'all' ? Colors.white : secondaryTxt, fontSize: 12),
+                        ),
+                      ),
                       selected: _morningEveningSubFilter == 'all',
-                      selectedColor: AppConstants.secondary,
-                      labelStyle: TextStyle(color: _morningEveningSubFilter == 'all' ? Colors.white : null, fontSize: 12),
+                      selectedColor: selectedBg,
+                      backgroundColor: AppConstants.cardSurface(context),
+                      side: BorderSide(color: AppConstants.borderColor(context)),
                       onSelected: (_) => setState(() => _morningEveningSubFilter = 'all'),
                     ),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: ChoiceChip(
-                      label: const Center(child: Text('☀️ أذكار الصباح')),
+                      label: Center(
+                        child: Text(
+                          '☀️ الصباح',
+                          style: TextStyle(color: _morningEveningSubFilter == 'morning' ? Colors.white : secondaryTxt, fontSize: 12),
+                        ),
+                      ),
                       selected: _morningEveningSubFilter == 'morning',
-                      selectedColor: AppConstants.tertiary,
-                      labelStyle: TextStyle(color: _morningEveningSubFilter == 'morning' ? Colors.white : null, fontSize: 12),
+                      selectedColor: selectedBg,
+                      backgroundColor: AppConstants.cardSurface(context),
+                      side: BorderSide(color: AppConstants.borderColor(context)),
                       onSelected: (_) => setState(() => _morningEveningSubFilter = 'morning'),
                     ),
                   ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: ChoiceChip(
-                      label: const Center(child: Text('🌙 أذكار المساء')),
+                      label: Center(
+                        child: Text(
+                          '🌙 المساء',
+                          style: TextStyle(color: _morningEveningSubFilter == 'evening' ? Colors.white : secondaryTxt, fontSize: 12),
+                        ),
+                      ),
                       selected: _morningEveningSubFilter == 'evening',
-                      selectedColor: AppConstants.primary,
-                      labelStyle: TextStyle(color: _morningEveningSubFilter == 'evening' ? Colors.white : null, fontSize: 12),
+                      selectedColor: selectedBg,
+                      backgroundColor: AppConstants.cardSurface(context),
+                      side: BorderSide(color: AppConstants.borderColor(context)),
                       onSelected: (_) => setState(() => _morningEveningSubFilter = 'evening'),
                     ),
                   ),
@@ -170,12 +197,11 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
 
           const SizedBox(height: 8),
 
-          // Adhkar List
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredList.isEmpty
-                    ? const Center(child: Text('لا توجد أذكار مطابقة للبحث'))
+                    ? Center(child: Text('لا توجد أذكار مطابقة للبحث', style: TextStyle(color: secondaryTxt)))
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _filteredList.length,
@@ -187,10 +213,11 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                           return Card(
                             margin: const EdgeInsets.only(bottom: 14),
                             elevation: 0,
+                            color: AppConstants.cardSurface(context),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(18),
                               side: BorderSide(
-                                color: isDone ? AppConstants.secondary : Colors.grey.withOpacity(0.2),
+                                color: isDone ? primaryTxt.withOpacity(0.5) : AppConstants.borderColor(context),
                                 width: isDone ? 1.5 : 1,
                               ),
                             ),
@@ -205,7 +232,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                       Expanded(
                                         child: Text(
                                           item.adminTitle,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.secondary),
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: secondaryTxt),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -223,9 +250,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                           decoration: BoxDecoration(
-                                            color: isDone
-                                                ? AppConstants.secondary
-                                                : AppConstants.primary.withOpacity(0.09),
+                                            color: isDone ? selectedBg : AppConstants.activeSurface(context),
                                             borderRadius: BorderRadius.circular(10),
                                           ),
                                           child: Text(
@@ -233,7 +258,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
-                                              color: isDone ? Colors.white : AppConstants.primary,
+                                              color: isDone ? Colors.white : primaryTxt,
                                             ),
                                           ),
                                         ),
@@ -251,7 +276,12 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                     },
                                     child: Text(
                                       item.text,
-                                      style: GoogleFonts.notoNaskhArabic(fontSize: 18, height: 1.85, fontWeight: FontWeight.bold),
+                                      style: GoogleFonts.notoNaskhArabic(
+                                        fontSize: 19,
+                                        height: 1.85,
+                                        fontWeight: FontWeight.bold,
+                                        color: primaryTxt,
+                                      ),
                                       textAlign: TextAlign.right,
                                     ),
                                   ),
@@ -260,21 +290,12 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: Colors.amber.withOpacity(0.09),
+                                        color: AppConstants.activeSurface(context),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
-                                      child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          const Icon(Icons.star, size: 16, color: Colors.amber),
-                                          const SizedBox(width: 6),
-                                          Expanded(
-                                            child: Text(
-                                              item.virtue,
-                                              style: const TextStyle(fontSize: 12, color: Colors.brown),
-                                            ),
-                                          ),
-                                        ],
+                                      child: Text(
+                                        item.virtue,
+                                        style: TextStyle(fontSize: 12, color: secondaryTxt),
                                       ),
                                     ),
                                   ],
@@ -285,10 +306,10 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                       child: ExpansionTile(
                                         tilePadding: const EdgeInsets.symmetric(horizontal: 4),
                                         childrenPadding: const EdgeInsets.only(bottom: 6),
-                                        leading: const Icon(Icons.menu_book, size: 18, color: AppConstants.primary),
+                                        leading: Icon(Icons.menu_book, size: 18, color: secondaryTxt),
                                         title: Text(
                                           'التخريج والحديث النبوي (${item.hadiths.length})',
-                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppConstants.primary),
+                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt),
                                         ),
                                         children: item.hadiths.map((h) {
                                           final hText = (h['text'] ?? '').toString();
@@ -297,16 +318,16 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                             margin: const EdgeInsets.only(top: 6),
                                             padding: const EdgeInsets.all(10),
                                             decoration: BoxDecoration(
-                                              color: AppConstants.primary.withOpacity(0.04),
+                                              color: AppConstants.activeSurface(context),
                                               borderRadius: BorderRadius.circular(10),
-                                              border: Border.all(color: AppConstants.primary.withOpacity(0.12)),
+                                              border: Border.all(color: AppConstants.borderColor(context)),
                                             ),
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.stretch,
                                               children: [
                                                 Text(
                                                   hText,
-                                                  style: GoogleFonts.notoNaskhArabic(fontSize: 13, height: 1.7),
+                                                  style: GoogleFonts.notoNaskhArabic(fontSize: 13, height: 1.7, color: primaryTxt),
                                                 ),
                                                 if (sources.isNotEmpty) ...[
                                                   const SizedBox(height: 8),
@@ -320,12 +341,13 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                                       return Container(
                                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                                         decoration: BoxDecoration(
-                                                          color: AppConstants.secondary.withOpacity(0.12),
+                                                          color: AppConstants.cardSurface(context),
                                                           borderRadius: BorderRadius.circular(8),
+                                                          border: Border.all(color: AppConstants.borderColor(context)),
                                                         ),
                                                         child: Text(
                                                           label,
-                                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppConstants.secondary),
+                                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: secondaryTxt),
                                                         ),
                                                       );
                                                     }).toList(),

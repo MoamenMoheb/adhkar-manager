@@ -114,7 +114,7 @@ const FASTING_MON_THU_TEMPLATE = {
 const FASTING_AYYAM_BEED_TEMPLATE = {
   key: 'fasting_ayyam_beed',
   title: 'صيام الأيام البيض (١٣-١٤-١٥)',
-  subtitle: 'صيام ثلاثة أيام من كل شهر هجري يعدل صيام الدهر كله',
+  subtitle: 'صيام ١٣ و١٤ و١٥ من الشهر الهجري',
   points: 30,
   category: 'fasting',
   categoryName: 'صيام التطوع والسنة',

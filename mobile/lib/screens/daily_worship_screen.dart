@@ -87,9 +87,12 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
     final todayHijri = HijriCalendar.fromGregorian(now, offsetDays: _hijriOffset);
     final tomorrowHijri = HijriCalendar.fromGregorian(now.add(const Duration(days: 1)), offsetDays: _hijriOffset);
 
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('الورد اليومي', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
+        title: Text('الورد اليومي', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -110,7 +113,7 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Hijri Date & Fasting Reminder Strip
+                  // Hijri Date Strip
                   InkWell(
                     onTap: _openHijriCalendar,
                     borderRadius: BorderRadius.circular(18),
@@ -118,27 +121,21 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
                       margin: const EdgeInsets.only(bottom: 14),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
-                        color: todayHijri.isFastingDay
-                            ? AppConstants.tertiary.withOpacity(0.14)
-                            : AppConstants.primary.withOpacity(0.07),
+                        color: AppConstants.cardSurface(context),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: todayHijri.isFastingDay
-                              ? AppConstants.tertiary.withOpacity(0.55)
-                              : AppConstants.primary.withOpacity(0.18),
-                        ),
+                        border: Border.all(color: AppConstants.borderColor(context)),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(9),
                             decoration: BoxDecoration(
-                              color: todayHijri.isFastingDay ? AppConstants.tertiary : AppConstants.primary,
+                              color: AppConstants.activeSurface(context),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
                               todayHijri.isFastingDay ? Icons.nightlight_round : Icons.calendar_month,
-                              color: Colors.white,
+                              color: primaryTxt,
                               size: 20,
                             ),
                           ),
@@ -152,30 +149,28 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
                                   style: GoogleFonts.ibmPlexSansArabic(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 14,
-                                    color: AppConstants.primary,
+                                    color: primaryTxt,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   todayHijri.isFastingDay
-                                      ? '🌙 اليوم ${todayHijri.fastingReasonLabel} (مضاف لنقاط اليوم!)'
+                                      ? 'اليوم: ${todayHijri.fastingReasonLabel}'
                                       : (tomorrowHijri.isFastingDay
-                                          ? '🔔 تذكير: غداً ${tomorrowHijri.fastingReasonLabel}'
-                                          : 'اضغط لفتح التقويم الهجري وتنبيهات الصيام'),
+                                          ? 'غداً: ${tomorrowHijri.fastingReasonLabel}'
+                                          : 'التقويم الهجري وتنبيهات الصيام'),
                                   style: TextStyle(
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     fontWeight: (todayHijri.isFastingDay || tomorrowHijri.isFastingDay)
                                         ? FontWeight.bold
                                         : FontWeight.normal,
-                                    color: todayHijri.isFastingDay
-                                        ? const Color(0xFF925E00)
-                                        : AppConstants.secondary,
+                                    color: secondaryTxt,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.chevron_right, color: Colors.grey),
+                          Icon(Icons.chevron_right, color: secondaryTxt),
                         ],
                       ),
                     ),
@@ -185,15 +180,9 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppConstants.primary, AppConstants.primaryContainer],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient: AppConstants.heroGradient(context),
                       borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(color: AppConstants.primary.withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 4)),
-                      ],
+                      border: Border.all(color: AppConstants.borderColor(context)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,15 +197,15 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withOpacity(0.14),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.local_fire_department, color: Colors.amber, size: 16),
+                                  const Icon(Icons.local_fire_department, color: Colors.white, size: 15),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${profile?.streakCount ?? 1} أيام متتالية',
+                                    '${profile?.streakCount ?? 1} أيام',
                                     style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                                   ),
                                 ],
@@ -230,7 +219,7 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
                           children: [
                             Text(
                               '$earnedPts / $maxPts نقطة',
-                              style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                              style: GoogleFonts.ibmPlexSansArabic(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                             ),
                             Text(
                               '${(percent * 100).toInt()}%',
@@ -244,8 +233,8 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
                           child: LinearProgressIndicator(
                             value: percent,
                             minHeight: 10,
-                            backgroundColor: Colors.white.withOpacity(0.2),
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
+                            backgroundColor: Colors.white.withOpacity(0.18),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
                       ],
@@ -254,78 +243,57 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Tasks Checklist
+                  // Clean Tasks Checklist — Header ONLY (no body/subtitle sentences)
                   ..._activeTasks.map((task) {
                     final isDone = _todayStatus[task.key] == true;
-                    final isFastingTask = task.category == 'fasting';
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 10),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(
-                          color: isDone
-                              ? AppConstants.secondary.withOpacity(0.4)
-                              : (isFastingTask
-                                  ? AppConstants.tertiary.withOpacity(0.55)
-                                  : Colors.grey.withOpacity(0.2)),
-                          width: isFastingTask && !isDone ? 1.5 : 1,
-                        ),
+                        side: BorderSide(color: AppConstants.borderColor(context)),
                       ),
-                      color: isDone
-                          ? AppConstants.secondary.withOpacity(0.06)
-                          : (isFastingTask ? AppConstants.tertiary.withOpacity(0.07) : null),
+                      color: isDone ? AppConstants.activeSurface(context) : AppConstants.cardSurface(context),
                       child: ListTile(
                         leading: Checkbox(
                           value: isDone,
-                          activeColor: isFastingTask ? AppConstants.tertiary : AppConstants.secondary,
+                          activeColor: AppConstants.accentBg(context),
+                          checkColor: Colors.white,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                           onChanged: (val) async {
                             await _service.toggleWorshipTask(task.key, val ?? false);
                             await _loadStatus();
                           },
                         ),
-                        title: Row(
-                          children: [
-                            if (isFastingTask) ...[
-                              const Icon(Icons.nightlight_round, size: 16, color: AppConstants.tertiary),
-                              const SizedBox(width: 6),
-                            ],
-                            Expanded(
-                              child: Text(
-                                task.title,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  decoration: isDone ? TextDecoration.lineThrough : null,
-                                  color: isDone ? Colors.grey : null,
-                                ),
-                              ),
-                            ),
-                          ],
+                        title: Text(
+                          task.title,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            decoration: isDone ? TextDecoration.lineThrough : null,
+                            color: isDone ? secondaryTxt : primaryTxt,
+                          ),
                         ),
-                        subtitle: Text(task.subtitle, style: const TextStyle(fontSize: 12)),
                         trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: isDone
-                                ? AppConstants.secondary.withOpacity(0.15)
-                                : (isFastingTask
-                                    ? AppConstants.tertiary.withOpacity(0.18)
-                                    : AppConstants.primary.withOpacity(0.08)),
+                            color: AppConstants.activeSurface(context),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             '+${task.points} ن',
                             style: TextStyle(
-                              color: isDone
-                                  ? AppConstants.secondary
-                                  : (isFastingTask ? const Color(0xFF925E00) : AppConstants.primary),
+                              color: isDone ? secondaryTxt : primaryTxt,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
                           ),
                         ),
+                        onTap: () async {
+                          await _service.toggleWorshipTask(task.key, !isDone);
+                          await _loadStatus();
+                        },
                       ),
                     );
                   }).toList(),

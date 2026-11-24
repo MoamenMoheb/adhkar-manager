@@ -4,18 +4,16 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
 import '../models/models.dart';
 import '../services/supabase_service.dart';
-import '../services/notification_service.dart';
 
 class MisbahaScreen extends StatefulWidget {
   const MisbahaScreen({super.key});
 
   @override
-  State<MisbahaScreen> createState() => _MisbahaScreenState();
+  State<MisbahaScreen> createState() => MisbahaScreenState();
 }
 
-class _MisbahaScreenState extends State<MisbahaScreen> {
+class MisbahaScreenState extends State<MisbahaScreen> {
   final SupabaseService _supabase = SupabaseService.instance;
-  final NotificationService _notif = NotificationService.instance;
 
   /// Modes: 'morning' (أذكار الصباح), 'evening' (أذكار المساء), 'free' (تسبيح حر)
   String _mode = 'morning';
@@ -29,7 +27,6 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
   bool _autoMarkedPoints = false;
   bool _isTransitioning = false;
 
-  // Free tasbeeh fallback options
   String _freeDhikrText = 'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ';
   int _freeTarget = 100;
   final List<Map<String, dynamic>> _freeOptions = const [
@@ -43,29 +40,20 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
   @override
   void initState() {
     super.initState();
-    // Default mode based on time of day unless a notification set pendingMisbahaMode
-    final pending = _notif.pendingMisbahaMode.value;
-    if (pending == 'morning' || pending == 'evening') {
-      _mode = pending!;
-      _notif.pendingMisbahaMode.value = null;
-    } else {
-      _mode = DateTime.now().hour < 14 ? 'morning' : 'evening';
-    }
-    _notif.pendingMisbahaMode.addListener(_onNotificationModeRequested);
+    _mode = DateTime.now().hour < 14 ? 'morning' : 'evening';
     _loadAdhkar();
   }
 
-  @override
-  void dispose() {
-    _notif.pendingMisbahaMode.removeListener(_onNotificationModeRequested);
-    super.dispose();
-  }
-
-  void _onNotificationModeRequested() {
-    final pending = _notif.pendingMisbahaMode.value;
-    if (pending == 'morning' || pending == 'evening') {
-      _notif.pendingMisbahaMode.value = null;
-      _switchMode(pending!);
+  /// Called directly by [MainShell] when user taps an Azkar notification.
+  void openFromNotification(String mode) {
+    if (mode != 'morning' && mode != 'evening') return;
+    if (!mounted) return;
+    setState(() {
+      _mode = mode;
+      _rebuildSequence();
+    });
+    if (_allAdhkar.isEmpty && !_loading) {
+      _loadAdhkar();
     }
   }
 
@@ -134,7 +122,7 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
       HapticFeedback.heavyImpact();
       if (_mode == 'free') {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('أتممت $_freeTarget تسبيحة! تقبل الله 🌟'), duration: const Duration(seconds: 2)),
+          SnackBar(content: Text('أتممت $_freeTarget تسبيحة! تقبل الله'), duration: const Duration(seconds: 2)),
         );
         setState(() => _counter = 0);
         return;
@@ -161,7 +149,6 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
       _isTransitioning = false;
     });
 
-    // Automatically mark morning_adhkar or evening_adhkar in daily points!
     final worshipKey = _mode == 'morning' ? 'morning_adhkar' : (_mode == 'evening' ? 'evening_adhkar' : null);
     if (worshipKey != null) {
       await _supabase.toggleWorshipTask(worshipKey, true);
@@ -169,11 +156,10 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
       setState(() => _autoMarkedPoints = true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: AppConstants.secondary,
           content: Text(
             _mode == 'morning'
-                ? 'ما شاء الله! أتممت أذكار الصباح وتم احتساب +١٥ نقطة تلقائياً في الورد اليومي ⭐'
-                : 'ما شاء الله! أتممت أذكار المساء وتم احتساب +١٥ نقطة تلقائياً في الورد اليومي ⭐',
+                ? 'تم إتمام أذكار الصباح واحتسابها في الورد اليومي'
+                : 'تم إتمام أذكار المساء واحتسابها في الورد اليومي',
           ),
         ),
       );
@@ -222,9 +208,37 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
         ? _sequenceList[_currentIndex]
         : null;
 
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
+    final isDark = AppConstants.isDark(context);
+    final selectedBg = AppConstants.accentBg(context);
+
+    Widget modeChip(String id, String label) {
+      final selected = _mode == id;
+      return Expanded(
+        child: ChoiceChip(
+          label: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                color: selected ? Colors.white : secondaryTxt,
+              ),
+            ),
+          ),
+          selected: selected,
+          selectedColor: selectedBg,
+          backgroundColor: AppConstants.cardSurface(context),
+          side: BorderSide(color: AppConstants.borderColor(context)),
+          onSelected: (_) => _switchMode(id),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('المسبحة والأذكار', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
+        title: Text('المسبحة والأذكار', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -240,52 +254,15 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
             : Column(
                 children: [
                   const SizedBox(height: 10),
-                  // Mode Selector Tabs (Morning / Evening / Free Tasbeeh)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        Expanded(
-                          child: ChoiceChip(
-                            label: const Center(child: Text('☀️ الصباح')),
-                            selected: _mode == 'morning',
-                            selectedColor: AppConstants.tertiary,
-                            labelStyle: TextStyle(
-                              color: _mode == 'morning' ? Colors.white : null,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                            onSelected: (_) => _switchMode('morning'),
-                          ),
-                        ),
+                        modeChip('morning', '☀️ الصباح'),
                         const SizedBox(width: 6),
-                        Expanded(
-                          child: ChoiceChip(
-                            label: const Center(child: Text('🌙 المساء')),
-                            selected: _mode == 'evening',
-                            selectedColor: AppConstants.primary,
-                            labelStyle: TextStyle(
-                              color: _mode == 'evening' ? Colors.white : null,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                            onSelected: (_) => _switchMode('evening'),
-                          ),
-                        ),
+                        modeChip('evening', '🌙 المساء'),
                         const SizedBox(width: 6),
-                        Expanded(
-                          child: ChoiceChip(
-                            label: const Center(child: Text('📿 تسبيح حر')),
-                            selected: _mode == 'free',
-                            selectedColor: AppConstants.secondary,
-                            labelStyle: TextStyle(
-                              color: _mode == 'free' ? Colors.white : null,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                            onSelected: (_) => _switchMode('free'),
-                          ),
-                        ),
+                        modeChip('free', '📿 تسبيح حر'),
                       ],
                     ),
                   ),
@@ -298,9 +275,9 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
+                          color: AppConstants.cardSurface(context),
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                          border: Border.all(color: AppConstants.borderColor(context)),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
@@ -309,7 +286,7 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                             items: _freeOptions.map((opt) {
                               return DropdownMenuItem<String>(
                                 value: opt['text'],
-                                child: Text(opt['text'], style: GoogleFonts.notoNaskhArabic(fontSize: 14), overflow: TextOverflow.ellipsis),
+                                child: Text(opt['text'], style: GoogleFonts.notoNaskhArabic(fontSize: 14, color: primaryTxt), overflow: TextOverflow.ellipsis),
                               );
                             }).toList(),
                             onChanged: (val) {
@@ -336,7 +313,7 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                             children: [
                               Text(
                                 'الذكر ${_currentIndex + 1} من ${_sequenceList.length}',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppConstants.secondary),
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt),
                               ),
                               if (currentDhikr != null)
                                 Expanded(
@@ -344,7 +321,7 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                                     currentDhikr.adminTitle,
                                     textAlign: TextAlign.left,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                    style: TextStyle(fontSize: 11, color: secondaryTxt),
                                   ),
                                 ),
                             ],
@@ -355,10 +332,8 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                             child: LinearProgressIndicator(
                               value: (_currentIndex + 1) / _sequenceList.length,
                               minHeight: 6,
-                              backgroundColor: Colors.grey.withOpacity(0.15),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                _mode == 'morning' ? AppConstants.tertiary : AppConstants.primary,
-                              ),
+                              backgroundColor: AppConstants.borderColor(context),
+                              valueColor: AlwaysStoppedAnimation<Color>(primaryTxt),
                             ),
                           ),
                         ],
@@ -372,19 +347,17 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: AppConstants.secondary.withOpacity(0.08),
+                          color: AppConstants.cardSurface(context),
                           borderRadius: BorderRadius.circular(24),
-                          border: Border.all(color: AppConstants.secondary.withOpacity(0.35)),
+                          border: Border.all(color: AppConstants.borderColor(context)),
                         ),
                         child: Column(
                           children: [
-                            const Icon(Icons.verified, size: 64, color: AppConstants.secondary),
+                            Icon(Icons.verified, size: 64, color: primaryTxt),
                             const SizedBox(height: 16),
                             Text(
-                              _mode == 'morning'
-                                  ? 'أتممت أذكار الصباح كاملة!'
-                                  : 'أتممت أذكار المساء كاملة!',
-                              style: GoogleFonts.ibmPlexSansArabic(fontSize: 20, fontWeight: FontWeight.bold, color: AppConstants.primary),
+                              _mode == 'morning' ? 'أتممت أذكار الصباح كاملة!' : 'أتممت أذكار المساء كاملة!',
+                              style: GoogleFonts.ibmPlexSansArabic(fontSize: 20, fontWeight: FontWeight.bold, color: primaryTxt),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 8),
@@ -392,26 +365,29 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.amber.withOpacity(0.2),
+                                  color: AppConstants.activeSurface(context),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Text(
-                                  '⭐ تم احتساب +١٥ نقطة تلقائياً في الورد اليومي!',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF8B5A00)),
+                                child: Text(
+                                  'تم تسجيل الإتمام في الورد اليومي (+١٥ نقطة)',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
                             const SizedBox(height: 12),
                             Text(
                               'عدد الأذكار: ${_sequenceList.length} • إجمالي التسبيحات: $_totalTaps',
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              style: TextStyle(fontSize: 12, color: secondaryTxt),
                             ),
                             const SizedBox(height: 20),
                             ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(backgroundColor: AppConstants.primary),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: selectedBg,
+                                foregroundColor: Colors.white,
+                              ),
                               onPressed: _reset,
-                              icon: const Icon(Icons.replay, color: Colors.white),
-                              label: const Text('إعادة القراءة من البداية', style: TextStyle(color: Colors.white)),
+                              icon: const Icon(Icons.replay),
+                              label: const Text('إعادة القراءة من البداية'),
                             ),
                           ],
                         ),
@@ -428,9 +404,10 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                             Text(
                               _activeText,
                               style: GoogleFonts.notoNaskhArabic(
-                                fontSize: _activeText.length > 180 ? 16 : 20,
+                                fontSize: _activeText.length > 180 ? 17 : 21,
                                 fontWeight: FontWeight.bold,
                                 height: 1.8,
+                                color: primaryTxt,
                               ),
                               textAlign: TextAlign.center,
                             ),
@@ -439,12 +416,12 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: Colors.amber.withOpacity(0.1),
+                                  color: AppConstants.activeSurface(context),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  '✨ ${currentDhikr.virtue}',
-                                  style: const TextStyle(fontSize: 11, color: Colors.brown),
+                                  currentDhikr.virtue,
+                                  style: TextStyle(fontSize: 12, color: secondaryTxt),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -454,7 +431,6 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                       ),
                     ),
 
-                    // Large Circular Counter Tap Area
                     GestureDetector(
                       onTap: _tap,
                       child: SizedBox(
@@ -469,10 +445,8 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                               child: CircularProgressIndicator(
                                 value: progress,
                                 strokeWidth: 11,
-                                backgroundColor: Colors.grey.withOpacity(0.15),
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  _mode == 'morning' ? AppConstants.tertiary : AppConstants.secondary,
-                                ),
+                                backgroundColor: AppConstants.borderColor(context),
+                                valueColor: AlwaysStoppedAnimation<Color>(primaryTxt),
                               ),
                             ),
                             Container(
@@ -480,18 +454,22 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                               height: 174,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppConstants.primary,
-                                    AppConstants.primaryContainer,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ),
+                                gradient: isDark
+                                    ? const LinearGradient(
+                                        colors: [Color(0xFF262C36), Color(0xFF171B22)],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : const LinearGradient(
+                                        colors: [AppConstants.primary, AppConstants.primaryContainer],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
+                                border: isDark ? Border.all(color: Colors.white.withOpacity(0.15)) : null,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppConstants.primary.withOpacity(0.32),
-                                    blurRadius: 18,
+                                    color: Colors.black.withOpacity(0.28),
+                                    blurRadius: 16,
                                     offset: const Offset(0, 6),
                                   ),
                                 ],
@@ -521,7 +499,6 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
 
                     const SizedBox(height: 12),
 
-                    // Navigation controls + total taps
                     Padding(
                       padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
                       child: Row(
@@ -537,7 +514,7 @@ class _MisbahaScreenState extends State<MisbahaScreen> {
                             const SizedBox(width: 48),
                           Text(
                             'إجمالي الجلسة: $_totalTaps',
-                            style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: secondaryTxt, fontSize: 12, fontWeight: FontWeight.bold),
                           ),
                           if (_mode != 'free')
                             IconButton(

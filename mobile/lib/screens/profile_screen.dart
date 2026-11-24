@@ -44,15 +44,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildUpdateTile() {
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
     return ListTile(
-      tileColor: AppConstants.secondary.withOpacity(0.08),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      tileColor: AppConstants.cardSurface(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppConstants.borderColor(context)),
+      ),
       leading: _checkingUpdate
           ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
-          : const Icon(Icons.system_update, color: AppConstants.secondary),
-      title: const Text('تحديث التطبيق من الداخل', style: TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text('الإصدار الحالي: v$_appVersion • اضغط للتحقق من التحديثات', style: const TextStyle(fontSize: 11)),
-      trailing: const Icon(Icons.refresh, size: 18),
+          : Icon(Icons.system_update, color: primaryTxt),
+      title: Text('تحديث التطبيق من الداخل', style: TextStyle(fontWeight: FontWeight.bold, color: primaryTxt)),
+      subtitle: Text('الإصدار الحالي: v$_appVersion • اضغط للتحقق من التحديثات', style: TextStyle(fontSize: 11, color: secondaryTxt)),
+      trailing: Icon(Icons.refresh, size: 18, color: secondaryTxt),
       onTap: _checkUpdateManual,
     );
   }
@@ -240,7 +245,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // Friend Code Share Card
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: AppConstants.cardSurface(context),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppConstants.borderColor(context)),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -249,12 +259,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('كود الصداقة الخاص بك', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                      Text(profile?.friendCode ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppConstants.primary)),
+                      Text('كود الصداقة الخاص بك', style: TextStyle(color: AppConstants.textSecondary(context), fontSize: 12)),
+                      Text(profile?.friendCode ?? '', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppConstants.textPrimary(context))),
                     ],
                   ),
                   IconButton(
-                    icon: const Icon(Icons.copy, color: AppConstants.secondary),
+                    icon: Icon(Icons.copy, color: AppConstants.textPrimary(context)),
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ كود الصداقة بنجاح 📋')));
                     },
@@ -268,22 +278,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // PRIVACY SETTING CARD (Public vs Friends vs Private)
           Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            color: AppConstants.cardSurface(context),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppConstants.borderColor(context)),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('خصوصية إنجازك في لوحة المتصدرين:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text('خصوصية إنجازك في لوحة المتصدرين:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.textPrimary(context))),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('🌍 عام')),
+                          label: Center(child: Text('🌍 عام', style: TextStyle(color: profile?.privacyLevel == 'public' ? Colors.white : AppConstants.textSecondary(context)))),
                           selected: profile?.privacyLevel == 'public',
-                          selectedColor: AppConstants.primary,
-                          labelStyle: TextStyle(color: profile?.privacyLevel == 'public' ? Colors.white : null),
+                          selectedColor: AppConstants.accentBg(context),
+                          backgroundColor: AppConstants.activeSurface(context),
                           onSelected: (_) async {
                             await _service.updatePrivacyLevel('public');
                             setState(() {});
@@ -293,10 +308,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('👥 أصدقائي')),
+                          label: Center(child: Text('👥 أصدقائي', style: TextStyle(color: profile?.privacyLevel == 'friends' ? Colors.white : AppConstants.textSecondary(context)))),
                           selected: profile?.privacyLevel == 'friends',
-                          selectedColor: AppConstants.primary,
-                          labelStyle: TextStyle(color: profile?.privacyLevel == 'friends' ? Colors.white : null),
+                          selectedColor: AppConstants.accentBg(context),
+                          backgroundColor: AppConstants.activeSurface(context),
                           onSelected: (_) async {
                             await _service.updatePrivacyLevel('friends');
                             setState(() {});
@@ -306,10 +321,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(width: 6),
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('🔒 خاص')),
+                          label: Center(child: Text('🔒 خاص', style: TextStyle(color: profile?.privacyLevel == 'private' ? Colors.white : AppConstants.textSecondary(context)))),
                           selected: profile?.privacyLevel == 'private',
-                          selectedColor: AppConstants.primary,
-                          labelStyle: TextStyle(color: profile?.privacyLevel == 'private' ? Colors.white : null),
+                          selectedColor: AppConstants.accentBg(context),
+                          backgroundColor: AppConstants.activeSurface(context),
                           onSelected: (_) async {
                             await _service.updatePrivacyLevel('private');
                             setState(() {});
@@ -327,12 +342,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // Hijri Calendar & Fasting Reminders Shortcut
           ListTile(
-            tileColor: AppConstants.primary.withOpacity(0.06),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            leading: const Icon(Icons.calendar_month, color: AppConstants.primary),
-            title: const Text('التقويم الهجري وتنبيهات الصيام', style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text('تذكير الإثنين والخميس والأيام البيض (١٣، ١٤، ١٥)', style: TextStyle(fontSize: 11)),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            tileColor: AppConstants.cardSurface(context),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppConstants.borderColor(context)),
+            ),
+            leading: Icon(Icons.calendar_month, color: AppConstants.textPrimary(context)),
+            title: Text('التقويم الهجري وتنبيهات الصيام', style: TextStyle(fontWeight: FontWeight.bold, color: AppConstants.textPrimary(context))),
+            subtitle: Text('تذكير الإثنين والخميس والأيام البيض (١٣، ١٤، ١٥)', style: TextStyle(fontSize: 11, color: AppConstants.textSecondary(context))),
+            trailing: Icon(Icons.arrow_forward_ios, size: 16, color: AppConstants.textSecondary(context)),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const HijriCalendarScreen()));
             },

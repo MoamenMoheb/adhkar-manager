@@ -112,7 +112,7 @@ class _AuthScreenState extends State<AuthScreen> {
             ),
             Text(
               'روضة الأذكار',
-              style: GoogleFonts.ibmPlexSansArabic(fontSize: 18, fontWeight: FontWeight.bold, color: AppConstants.primary),
+              style: GoogleFonts.ibmPlexSansArabic(fontSize: 18, fontWeight: FontWeight.bold, color: AppConstants.textPrimary(context)),
             ),
             const SizedBox(height: 20),
             if (_error != null) ...[
@@ -137,16 +137,16 @@ class _AuthScreenState extends State<AuthScreen> {
                   ChoiceChip(
                     label: const Text('🚹 رجل'),
                     selected: _gender == 'male',
-                    selectedColor: AppConstants.primary,
-                    labelStyle: TextStyle(color: _gender == 'male' ? Colors.white : null),
+                    selectedColor: AppConstants.accentBg(context),
+                    labelStyle: TextStyle(color: _gender == 'male' ? Colors.white : AppConstants.textSecondary(context)),
                     onSelected: (_) => setState(() => _gender = 'male'),
                   ),
                   const SizedBox(width: 8),
                   ChoiceChip(
                     label: const Text('🚺 امرأة'),
                     selected: _gender == 'female',
-                    selectedColor: AppConstants.secondary,
-                    labelStyle: TextStyle(color: _gender == 'female' ? Colors.white : null),
+                    selectedColor: AppConstants.accentBg(context),
+                    labelStyle: TextStyle(color: _gender == 'female' ? Colors.white : AppConstants.textSecondary(context)),
                     onSelected: (_) => setState(() => _gender = 'female'),
                   ),
                 ],
@@ -169,7 +169,7 @@ class _AuthScreenState extends State<AuthScreen> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppConstants.primary),
+                style: ElevatedButton.styleFrom(backgroundColor: AppConstants.accentBg(context), foregroundColor: Colors.white),
                 onPressed: _loading ? null : _submit,
                 child: _loading
                     ? const CircularProgressIndicator(color: Colors.white)

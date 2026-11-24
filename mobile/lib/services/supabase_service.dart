@@ -122,7 +122,7 @@ class SupabaseService extends ChangeNotifier {
   static const WorshipTaskModel _fastingAyyamBeedTemplate = WorshipTaskModel(
     key: 'fasting_ayyam_beed',
     title: 'صيام الأيام البيض (١٣-١٤-١٥)',
-    subtitle: 'صيام ثلاثة أيام من كل شهر هجري يعدل صيام الدهر كله',
+    subtitle: '',
     points: 30,
     category: 'fasting',
     categoryName: 'صيام التطوع والسنة',

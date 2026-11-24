@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'daily_worship_screen.dart';
 import 'prayer_times_screen.dart';
@@ -6,6 +7,7 @@ import 'misbaha_screen.dart';
 import 'leaderboard_screen.dart';
 import 'profile_screen.dart';
 import '../core/constants/constants.dart';
+import '../main.dart';
 import '../services/notification_service.dart';
 import '../services/azan_audio_service.dart';
 import '../services/app_update_service.dart';
@@ -17,57 +19,65 @@ class MainShell extends StatefulWidget {
   State<MainShell> createState() => _MainShellState();
 }
 
-class _MainShellState extends State<MainShell> {
+class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _currentIndex = 0;
+  final GlobalKey<MisbahaScreenState> _misbahaKey = GlobalKey<MisbahaScreenState>();
+  StreamSubscription<String>? _notifSub;
 
-  final List<Widget> _screens = const [
-    DailyWorshipScreen(),
-    PrayerTimesScreen(),
-    AdhkarLibraryScreen(),
-    MisbahaScreen(),
-    LeaderboardScreen(),
-    ProfileScreen(),
+  late final List<Widget> _screens = [
+    const DailyWorshipScreen(),
+    const PrayerTimesScreen(),
+    const AdhkarLibraryScreen(),
+    MisbahaScreen(key: _misbahaKey),
+    const LeaderboardScreen(),
+    const ProfileScreen(),
   ];
 
   @override
   void initState() {
     super.initState();
-    if (NotificationService.instance.pendingMisbahaMode.value != null) {
-      _currentIndex = 3; // Misbaha tab
-    } else if (NotificationService.instance.pendingPrayerKey.value != null) {
-      _currentIndex = 1; // Prayer/Azan tab
-      NotificationService.instance.pendingPrayerKey.value = null;
-    }
-    NotificationService.instance.pendingMisbahaMode.addListener(_onPendingMisbaha);
-    NotificationService.instance.pendingPrayerKey.addListener(_onPendingPrayer);
+    WidgetsBinding.instance.addObserver(this);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkForAppUpdates());
-  }
+    _notifSub = NotificationService.instance.onNotificationTap.listen(_handleNotificationPayload);
 
-  Future<void> _checkForAppUpdates() async {
-    final update = await AppUpdateService.instance.checkForUpdate();
-    if (update != null && mounted) {
-      await AppUpdateService.instance.showUpdateDialog(context, update);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final initial = NotificationService.instance.initialLaunchPayload;
+      if (initial != null && initial.isNotEmpty) {
+        NotificationService.instance.initialLaunchPayload = null;
+        _handleNotificationPayload(initial);
+      }
+      _checkForAppUpdates();
+    });
   }
 
   @override
   void dispose() {
-    NotificationService.instance.pendingMisbahaMode.removeListener(_onPendingMisbaha);
-    NotificationService.instance.pendingPrayerKey.removeListener(_onPendingPrayer);
+    WidgetsBinding.instance.removeObserver(this);
+    _notifSub?.cancel();
     super.dispose();
   }
 
-  void _onPendingMisbaha() {
-    if (NotificationService.instance.pendingMisbahaMode.value != null && mounted) {
-      setState(() => _currentIndex = 3);
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      NotificationService.instance.updateOngoingPrayerNotification();
     }
   }
 
-  Future<void> _onPendingPrayer() async {
-    final key = NotificationService.instance.pendingPrayerKey.value;
-    if (key != null && mounted) {
-      NotificationService.instance.pendingPrayerKey.value = null;
+  Future<void> _handleNotificationPayload(String payload) async {
+    if (!mounted) return;
+    // Pop any pushed sub-routes (e.g., HijriCalendarScreen, AuthScreen) back to MainShell
+    rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
+
+    if (payload == 'misbaha:morning' || payload == 'misbaha:evening') {
+      final mode = payload.split(':').last;
+      setState(() => _currentIndex = 3);
+      // Ensure MisbahaScreen state switches mode immediately
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _misbahaKey.currentState?.openFromNotification(mode);
+      });
+    } else if (payload.startsWith('prayer:')) {
+      final key = payload.substring('prayer:'.length);
       setState(() => _currentIndex = 1);
       final mode = await NotificationService.instance.getPrayerSoundMode();
       if (key != 'sunrise' && mode == 'azan') {
@@ -78,8 +88,18 @@ class _MainShellState extends State<MainShell> {
     }
   }
 
+  Future<void> _checkForAppUpdates() async {
+    final update = await AppUpdateService.instance.checkForUpdate();
+    if (update != null && mounted) {
+      await AppUpdateService.instance.showUpdateDialog(context, update);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final activeIconColor = AppConstants.accent(context);
+    final inactiveIconColor = AppConstants.textSecondary(context);
+
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -88,37 +108,40 @@ class _MainShellState extends State<MainShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (idx) => setState(() => _currentIndex = idx),
-        indicatorColor: AppConstants.primaryContainer.withOpacity(0.2),
+        backgroundColor: AppConstants.isDark(context) ? AppConstants.cardDark : null,
+        indicatorColor: AppConstants.isDark(context)
+            ? Colors.white.withOpacity(0.14)
+            : AppConstants.primaryContainer.withOpacity(0.15),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.task_alt_outlined),
-            selectedIcon: Icon(Icons.task_alt, color: AppConstants.primary),
+            icon: Icon(Icons.task_alt_outlined, color: inactiveIconColor),
+            selectedIcon: Icon(Icons.task_alt, color: activeIconColor),
             label: 'الورد',
           ),
           NavigationDestination(
-            icon: Icon(Icons.mosque_outlined),
-            selectedIcon: Icon(Icons.mosque, color: AppConstants.primary),
+            icon: Icon(Icons.mosque_outlined, color: inactiveIconColor),
+            selectedIcon: Icon(Icons.mosque, color: activeIconColor),
             label: 'الأذان',
           ),
           NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book, color: AppConstants.primary),
+            icon: Icon(Icons.menu_book_outlined, color: inactiveIconColor),
+            selectedIcon: Icon(Icons.menu_book, color: activeIconColor),
             label: 'الأذكار',
           ),
           NavigationDestination(
-            icon: Icon(Icons.touch_app_outlined),
-            selectedIcon: Icon(Icons.touch_app, color: AppConstants.primary),
+            icon: Icon(Icons.touch_app_outlined, color: inactiveIconColor),
+            selectedIcon: Icon(Icons.touch_app, color: activeIconColor),
             label: 'المسبحة',
           ),
           NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined),
-            selectedIcon: Icon(Icons.emoji_events, color: AppConstants.primary),
+            icon: Icon(Icons.emoji_events_outlined, color: inactiveIconColor),
+            selectedIcon: Icon(Icons.emoji_events, color: activeIconColor),
             label: 'المتصدرون',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppConstants.primary),
+            icon: Icon(Icons.person_outline, color: inactiveIconColor),
+            selectedIcon: Icon(Icons.person, color: activeIconColor),
             label: 'حسابي',
           ),
         ],

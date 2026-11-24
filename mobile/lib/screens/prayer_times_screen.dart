@@ -25,7 +25,8 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
   String _cityKey = SunTimesCalculator.defaultCityForLocalTimezone().key;
   String? _methodKey;
   bool _hanafiAsr = false;
-  String _soundMode = 'azan'; // 'azan', 'takbeer', 'default'
+  bool _fixedNotifEnabled = true;
+  String _soundMode = 'azan';
   int _hijriOffset = 0;
 
   final Map<String, bool> _prayerFlags = {
@@ -56,6 +57,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
     final cityKey = await _notif.getSelectedCityKey();
     final methodKey = await _notif.getPrayerMethodKey();
     final hanafi = await _notif.isHanafiAsr();
+    final fixedNotif = await _notif.isFixedPrayerNotifEnabled();
     final soundMode = await _notif.getPrayerSoundMode();
     final offset = await _notif.getHijriOffset();
     for (final k in _prayerFlags.keys.toList()) {
@@ -66,6 +68,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
       _cityKey = cityKey;
       _methodKey = methodKey;
       _hanafiAsr = hanafi;
+      _fixedNotifEnabled = fixedNotif;
       _soundMode = soundMode;
       _hijriOffset = offset;
     });
@@ -125,27 +128,24 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
     final remaining = nextPrayer.time.difference(_now);
     final hijri = HijriCalendar.fromGregorian(_now, offsetDays: _hijriOffset);
 
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('مواقيت الصلاة والأذان', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold)),
+        title: Text('مواقيت الصلاة والأذان', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // 1. Live Countdown Hero Card + Azan Audio Control
+          // 1. Live Countdown Hero Card
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppConstants.primary, AppConstants.primaryContainer],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-              ),
+              gradient: AppConstants.heroGradient(context),
               borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(color: AppConstants.primary.withOpacity(0.3), blurRadius: 14, offset: const Offset(0, 6)),
-              ],
+              border: Border.all(color: AppConstants.borderColor(context)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,7 +155,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.location_on, color: Colors.amber, size: 18),
+                        const Icon(Icons.location_on, color: Colors.white70, size: 18),
                         const SizedBox(width: 6),
                         Text(city.nameAr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
@@ -176,42 +176,38 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                         _formatCountdown(remaining),
                         style: GoogleFonts.ibmPlexSansArabic(
                           color: Colors.white,
-                          fontSize: 38,
+                          fontSize: 40,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 1.5,
                         ),
                       ),
                       Text(
                         'موعد الأذان: ${_formatTime(nextPrayer.time)}',
-                        style: const TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Live Play / Stop Azan Audio Button
                 ValueListenableBuilder<bool>(
                   valueListenable: _audio.isPlaying,
                   builder: (context, playing, _) {
-                    return Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: playing ? Colors.amber : Colors.white.withOpacity(0.18),
-                              foregroundColor: playing ? Colors.black87 : Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                              elevation: 0,
-                            ),
-                            icon: Icon(playing ? Icons.stop_circle : Icons.volume_up),
-                            label: Text(
-                              playing ? 'إيقاف صوت الأذان' : 'تشغيل أذان الحرم المكي 🕌',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            onPressed: () => _audio.playAzan(shortTakbeer: false),
-                          ),
+                    return SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: playing ? Colors.white : Colors.white.withOpacity(0.16),
+                          foregroundColor: playing ? Colors.black87 : Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
                         ),
-                      ],
+                        icon: Icon(playing ? Icons.stop_circle : Icons.volume_up),
+                        label: Text(
+                          playing ? 'إيقاف صوت الأذان' : 'تشغيل أذان الحرم المكي 🕌',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        onPressed: () => _audio.playAzan(shortTakbeer: false),
+                      ),
                     );
                   },
                 ),
@@ -224,9 +220,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
           // 2. All 5 Prayers + Sunrise Cards
           Card(
             elevation: 0,
+            color: AppConstants.cardSurface(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+              side: BorderSide(color: AppConstants.borderColor(context)),
             ),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
@@ -238,23 +235,21 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   return Container(
                     margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                     decoration: BoxDecoration(
-                      color: isNext ? AppConstants.primary.withOpacity(0.09) : Colors.transparent,
+                      color: isNext ? AppConstants.activeSurface(context) : Colors.transparent,
                       borderRadius: BorderRadius.circular(14),
-                      border: isNext ? Border.all(color: AppConstants.primary.withOpacity(0.35)) : null,
+                      border: isNext ? Border.all(color: AppConstants.borderColor(context)) : null,
                     ),
                     child: ListTile(
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: isNext
-                              ? AppConstants.primary
-                              : (entry.isFardPrayer ? AppConstants.secondary.withOpacity(0.12) : Colors.amber.withOpacity(0.15)),
+                          color: isNext ? AppConstants.accentBg(context) : AppConstants.activeSurface(context),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
                           _iconForPrayer(entry.key),
                           size: 20,
-                          color: isNext ? Colors.white : (entry.isFardPrayer ? AppConstants.secondary : AppConstants.tertiary),
+                          color: isNext ? Colors.white : secondaryTxt,
                         ),
                       ),
                       title: Row(
@@ -262,40 +257,40 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                           Text(
                             entry.nameAr,
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: isNext ? AppConstants.primary : null,
+                              fontWeight: isNext ? FontWeight.bold : FontWeight.w600,
+                              fontSize: isNext ? 16 : 15,
+                              color: primaryTxt,
                             ),
                           ),
                           if (isNext) ...[
                             const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(color: AppConstants.primary, borderRadius: BorderRadius.circular(8)),
+                              decoration: BoxDecoration(
+                                color: AppConstants.accentBg(context),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               child: const Text('التالي', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ],
                       ),
-                      subtitle: entry.key == 'sunrise'
-                          ? const Text('تذكير انتهاء وقت الفجر (صلاة الضحى)', style: TextStyle(fontSize: 11))
-                          : null,
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             _formatTime(entry.time),
                             style: GoogleFonts.ibmPlexSansArabic(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: isNext ? FontWeight.bold : FontWeight.w600,
                               fontSize: 15,
-                              color: isNext ? AppConstants.primary : null,
+                              color: isNext ? primaryTxt : secondaryTxt,
                             ),
                           ),
                           const SizedBox(width: 6),
                           IconButton(
                             icon: Icon(
                               isNotifOn ? Icons.notifications_active : Icons.notifications_off_outlined,
-                              color: isNotifOn ? AppConstants.tertiary : Colors.grey,
+                              color: isNotifOn ? primaryTxt : secondaryTxt,
                               size: 20,
                             ),
                             tooltip: isNotifOn ? 'إيقاف التنبيه' : 'تفعيل التنبيه',
@@ -316,29 +311,45 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
 
           const SizedBox(height: 16),
 
-          // 3. Azan Sound & Calculation Settings Card
+          // 3. Azan Sound, Fixed Countdown & Calculation Settings
           Card(
             elevation: 0,
+            color: AppConstants.cardSurface(context),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
-              side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+              side: BorderSide(color: AppConstants.borderColor(context)),
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('إعدادات صوت الأذان وطريقة الحساب', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('إعدادات الأذان والإشعارات', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: primaryTxt)),
                   const Divider(height: 22),
 
-                  const Text('صوت تنبيه دخول وقت الصلاة:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('إشعار دائم للصلاة القادمة في الشريط', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: primaryTxt)),
+                    subtitle: Text('يعرض اسم الصلاة ووقتها والعد التنازلي المتبقي', style: TextStyle(fontSize: 11, color: secondaryTxt)),
+                    value: _fixedNotifEnabled,
+                    activeColor: AppConstants.accentBg(context),
+                    onChanged: (val) async {
+                      await _notif.requestPermissions();
+                      await _notif.setFixedPrayerNotifEnabled(val);
+                      setState(() => _fixedNotifEnabled = val);
+                    },
+                  ),
+
+                  const Divider(height: 20),
+
+                  Text('صوت تنبيه دخول وقت الصلاة:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt)),
+                  const SizedBox(height: 6),
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('🕌 صوت الأذان الكامل (أذان الحرم المكي)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    title: Text('صوت الأذان الكامل (أذان الحرم المكي)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
                     value: 'azan',
                     groupValue: _soundMode,
-                    activeColor: AppConstants.primary,
+                    activeColor: primaryTxt,
                     onChanged: (val) async {
                       if (val != null) {
                         await _notif.setPrayerSoundMode(val);
@@ -348,10 +359,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   ),
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('🔔 تكبيرة الأذان المختصرة (١٠ ثوانٍ)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    title: Text('تكبيرة الأذان المختصرة (١٠ ثوانٍ)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
                     value: 'takbeer',
                     groupValue: _soundMode,
-                    activeColor: AppConstants.primary,
+                    activeColor: primaryTxt,
                     onChanged: (val) async {
                       if (val != null) {
                         await _notif.setPrayerSoundMode(val);
@@ -361,10 +372,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   ),
                   RadioListTile<String>(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('🔊 نغمة الإشعارات الافتراضية للهاتف', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                    title: Text('نغمة الإشعارات الافتراضية للهاتف', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
                     value: 'default',
                     groupValue: _soundMode,
-                    activeColor: AppConstants.primary,
+                    activeColor: primaryTxt,
                     onChanged: (val) async {
                       if (val != null) {
                         await _notif.setPrayerSoundMode(val);
@@ -392,7 +403,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(backgroundColor: AppConstants.primary, foregroundColor: Colors.white),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppConstants.accentBg(context),
+                            foregroundColor: Colors.white,
+                          ),
                           icon: const Icon(Icons.notifications_active, size: 18),
                           label: const Text('تجربة إشعار الأذان', style: TextStyle(fontSize: 12)),
                           onPressed: () => _notif.showTestPrayerNotification(),
@@ -411,7 +425,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     items: SunTimesCalculator.cities
-                        .map((c) => DropdownMenuItem(value: c.key, child: Text(c.nameAr, style: const TextStyle(fontSize: 13))))
+                        .map((c) => DropdownMenuItem(value: c.key, child: Text(c.nameAr, style: TextStyle(fontSize: 13, color: primaryTxt))))
                         .toList(),
                     onChanged: (val) async {
                       if (val != null) {
@@ -429,7 +443,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     items: PrayerTimesCalculator.methods
-                        .map((m) => DropdownMenuItem(value: m.key, child: Text(m.nameAr, style: const TextStyle(fontSize: 12))))
+                        .map((m) => DropdownMenuItem(value: m.key, child: Text(m.nameAr, style: TextStyle(fontSize: 12, color: primaryTxt))))
                         .toList(),
                     onChanged: (val) async {
                       if (val != null) {
@@ -441,10 +455,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   const SizedBox(height: 8),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('المذهب الحنفي لصلاة العصر', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                    subtitle: const Text('افتراضي: مذهب الجمهور (الشافعي والمالكي والحنبلي)', style: TextStyle(fontSize: 11)),
+                    title: Text('المذهب الحنفي لصلاة العصر', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
+                    subtitle: Text('افتراضي: مذهب الجمهور (الشافعي والمالكي والحنبلي)', style: TextStyle(fontSize: 11, color: secondaryTxt)),
                     value: _hanafiAsr,
-                    activeColor: AppConstants.primary,
+                    activeColor: AppConstants.accentBg(context),
                     onChanged: (val) async {
                       await _notif.setHanafiAsr(val);
                       setState(() => _hanafiAsr = val);

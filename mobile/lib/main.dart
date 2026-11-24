@@ -6,7 +6,8 @@ import 'core/constants/constants.dart';
 import 'services/supabase_service.dart';
 import 'services/notification_service.dart';
 import 'screens/main_shell.dart';
-import 'screens/auth_screen.dart';
+
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +28,13 @@ class AdhkarApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final darkTextTheme = GoogleFonts.ibmPlexSansArabicTextTheme(ThemeData.dark().textTheme).apply(
+      bodyColor: const Color(0xFFF3F4F6),
+      displayColor: const Color(0xFFF3F4F6),
+    );
+
     return MaterialApp(
+      navigatorKey: rootNavigatorKey,
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar'),
@@ -47,9 +54,34 @@ class AdhkarApp extends StatelessWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        colorSchemeSeed: AppConstants.secondary,
         scaffoldBackgroundColor: AppConstants.surfaceDark,
-        textTheme: GoogleFonts.ibmPlexSansArabicTextTheme(ThemeData.dark().textTheme),
+        cardColor: AppConstants.cardDark,
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFE5E7EB),
+          secondary: Color(0xFF9CA3AF),
+          surface: Color(0xFF161B22),
+          onPrimary: Color(0xFF111827),
+          onSecondary: Color(0xFF111827),
+          onSurface: Color(0xFFF3F4F6),
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppConstants.surfaceDark,
+          foregroundColor: Color(0xFFF3F4F6),
+          elevation: 0,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          backgroundColor: AppConstants.cardDark,
+          indicatorColor: Colors.white.withOpacity(0.14),
+          labelTextStyle: MaterialStateProperty.resolveWith((states) {
+            final selected = states.contains(MaterialState.selected);
+            return TextStyle(
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+              color: selected ? const Color(0xFFF3F4F6) : const Color(0xFF9CA3AF),
+            );
+          }),
+        ),
+        textTheme: darkTextTheme,
       ),
       home: const MainShell(),
     );

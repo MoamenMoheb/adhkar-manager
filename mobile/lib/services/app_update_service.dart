@@ -229,16 +229,16 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppConstants.primary.withOpacity(0.1),
+              color: AppConstants.activeSurface(context),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.system_update, color: AppConstants.primary),
+            child: Icon(Icons.system_update, color: AppConstants.textPrimary(context)),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               'يتوفر تحديث جديد v${widget.update.latestVersion}',
-              style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16),
+              style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: AppConstants.textPrimary(context)),
             ),
           ),
         ],
@@ -249,7 +249,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         children: [
           Text(
             'الإصدار الحالي: ${widget.update.currentVersion} ➔ الجديد: ${widget.update.latestVersion} $sizeText',
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppConstants.secondary),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppConstants.textSecondary(context)),
           ),
           const SizedBox(height: 10),
           ConstrainedBox(
@@ -257,7 +257,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
             child: SingleChildScrollView(
               child: Text(
                 widget.update.releaseNotes,
-                style: const TextStyle(fontSize: 12, height: 1.5),
+                style: TextStyle(fontSize: 12, height: 1.5, color: AppConstants.textPrimary(context)),
               ),
             ),
           ),
@@ -268,8 +268,8 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               child: LinearProgressIndicator(
                 value: _progress > 0 ? _progress : null,
                 minHeight: 8,
-                color: AppConstants.primary,
-                backgroundColor: AppConstants.primary.withOpacity(0.15),
+                color: AppConstants.textPrimary(context),
+                backgroundColor: AppConstants.borderColor(context),
               ),
             ),
             const SizedBox(height: 6),
@@ -277,12 +277,12 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               _total > 0
                   ? 'جاري التحميل: ${(_progress * 100).toInt()}% (${_mb(_received)} / ${_mb(_total)} MB)'
                   : 'جاري تحميل التحديث من داخل التطبيق...',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppConstants.primary),
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppConstants.textPrimary(context)),
             ),
           ],
           if (_error != null) ...[
             const SizedBox(height: 12),
-            Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 11)),
+            Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 11)),
           ],
         ],
       ),
@@ -294,7 +294,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
           ),
         ElevatedButton.icon(
           style: ElevatedButton.styleFrom(
-            backgroundColor: AppConstants.primary,
+            backgroundColor: AppConstants.accentBg(context),
             foregroundColor: Colors.white,
           ),
           onPressed: _downloading ? null : _startUpdate,
