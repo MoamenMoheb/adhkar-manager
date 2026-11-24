@@ -30,13 +30,44 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       if (_isSignUp) {
-        await _service.signUp(
+        final res = await _service.signUp(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
           displayName: _nameController.text.trim(),
           gender: _gender,
           avatarId: _gender == 'female' ? 'f1' : 'm1',
         );
+        if (res.session == null) {
+          if (!mounted) return;
+          await showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(
+                children: const [
+                  Icon(Icons.mark_email_read, color: AppConstants.tertiary),
+                  SizedBox(width: 8),
+                  Text('تأكيد البريد الإلكتروني', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+              content: Text(
+                'تم إرسال رابط تأكيد الحساب إلى:\n${_emailController.text.trim()}\n\nيرجى فتح بريدك والضغط على رابط التفعيل، ثم العودة لتسجيل الدخول.',
+                style: const TextStyle(fontSize: 13, height: 1.5),
+              ),
+              actions: [
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppConstants.primary),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    setState(() => _isSignUp = false);
+                  },
+                  child: const Text('حسناً، الانتقال لتسجيل الدخول', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
       } else {
         await _service.signIn(
           email: _emailController.text.trim(),
@@ -59,6 +90,31 @@ class _AuthScreenState extends State<AuthScreen> {
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
+            // App Islamic Icon
+            Container(
+              width: 84,
+              height: 84,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppConstants.primary.withOpacity(0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
+                child: Image.asset('assets/icons/app_icon.png', fit: BoxFit.cover),
+              ),
+            ),
+            Text(
+              'روضة الأذكار',
+              style: GoogleFonts.ibmPlexSansArabic(fontSize: 18, fontWeight: FontWeight.bold, color: AppConstants.primary),
+            ),
+            const SizedBox(height: 20),
             if (_error != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),

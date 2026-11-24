@@ -48,8 +48,90 @@ jobs:
           cp /tmp/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           cp -r /tmp/res_backup/* android/app/src/main/res/
 
+          # Enable coreLibraryDesugaring for flutter_local_notifications
+          python3 - <<'EOF'
+          import os, re
+          kts = "android/app/build.gradle.kts"
+          groovy = "android/app/build.gradle"
+          if os.path.exists(kts):
+              s = open(kts).read()
+              if "isCoreLibraryDesugaringEnabled" not in s:
+                  s = s.replace("compileOptions {", "compileOptions {\n        isCoreLibraryDesugaringEnabled = true")
+              if "desugar_jdk_libs" not in s:
+                  s += '\ndependencies {\n    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")\n}\n'
+              open(kts, "w").write(s)
+          elif os.path.exists(groovy):
+              s = open(groovy).read()
+              if "coreLibraryDesugaringEnabled" not in s:
+                  s = s.replace("compileOptions {", "compileOptions {\n        coreLibraryDesugaringEnabled true")
+              if "desugar_jdk_libs" not in s:
+                  s += "\ndependencies {\n    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'\n}\n"
+              open(groovy, "w").write(s)
+          EOF
+
           # Ensure gradlew has executable permissions
           chmod +x android/gradlew
+
+      - name: Configure Persistent Signing (if GitHub Secrets set)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd mobile
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > android/app/release-keystore.jks
+            cat <<EOF > android/key.properties
+          storePassword=$STORE_PASS
+          keyPassword=$KEY_PASS
+          keyAlias=$KEY_ALIAS
+          storeFile=release-keystore.jks
+          EOF
+            python3 - <<'PYEOF'
+          import os
+          kts = "android/app/build.gradle.kts"
+          groovy = "android/app/build.gradle"
+          if os.path.exists(kts):
+              s = open(kts).read()
+              imports = "import java.util.Properties\nimport java.io.FileInputStream\n"
+              ks_init = '''val keystoreProperties = Properties()
+          val keystorePropertiesFile = rootProject.file("key.properties")
+          if (keystorePropertiesFile.exists()) { keystoreProperties.load(FileInputStream(keystorePropertiesFile)) }
+          android {'''
+              signing_block = '''    signingConfigs {
+                  create("release") {
+                      keyAlias = keystoreProperties.getProperty("keyAlias")
+                      keyPassword = keystoreProperties.getProperty("keyPassword")
+                      storeFile = file(keystoreProperties.getProperty("storeFile"))
+                      storePassword = keystoreProperties.getProperty("storePassword")
+                  }
+              }
+              buildTypes {'''
+              s = imports + s.replace("android {", ks_init).replace("    buildTypes {", signing_block).replace('signingConfig = signingConfigs.getByName("debug")', 'signingConfig = signingConfigs.getByName("release")')
+              open(kts, "w").write(s)
+          elif os.path.exists(groovy):
+              s = open(groovy).read()
+              header = '''def keystoreProperties = new Properties()
+          def keystorePropertiesFile = rootProject.file('key.properties')
+          if (keystorePropertiesFile.exists()) { keystoreProperties.load(new FileInputStream(keystorePropertiesFile)) }
+          '''
+              signing_block = '''    signingConfigs {
+                  release {
+                      keyAlias keystoreProperties['keyAlias']
+                      keyPassword keystoreProperties['keyPassword']
+                      storeFile file(keystoreProperties['storeFile'])
+                      storePassword keystoreProperties['storePassword']
+                  }
+              }
+              buildTypes {'''
+              s = header + s.replace("    buildTypes {", signing_block).replace("signingConfig signingConfigs.debug", "signingConfig signingConfigs.release")
+              open(groovy, "w").write(s)
+          PYEOF
+            echo "Configured persistent release signing keystore."
+          else
+            echo "::notice::ANDROID_KEYSTORE_BASE64 secret not set; using runner debug keystore."
+          fi
 
       - name: Install Flutter Dependencies
         run: |
@@ -59,28 +141,32 @@ jobs:
       - name: Build Android Release APK
         run: |
           cd mobile
-          flutter build apk --release
+          VERSION_NAME="1.0.${{ github.run_number }}"
+          BUILD_NUM="${{ github.run_number }}"
+          echo "APP_VERSION=$VERSION_NAME" >> $GITHUB_ENV
+          flutter build apk --release --build-name="$VERSION_NAME" --build-number="$BUILD_NUM"
 
       - name: Prepare APK Output
         run: |
           mkdir -p dist
-          cp mobile/build/app/outputs/flutter-apk/app-release.apk dist/adhkar-sanctuary-v1.0.0.apk
+          cp mobile/build/app/outputs/flutter-apk/app-release.apk "dist/adhkar-sanctuary-v${APP_VERSION}.apk"
           ls -lh dist/
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: adhkar-sanctuary-apk
-          path: dist/adhkar-sanctuary-v1.0.0.apk
+          path: "dist/adhkar-sanctuary-v${APP_VERSION}.apk"
           retention-days: 30
 
       - name: Publish GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.0.0 --yes || true
-          git tag -d v1.0.0 || true
-          gh release create v1.0.0 dist/adhkar-sanctuary-v1.0.0.apk \
-            --title "تطبيق أذكار - الإصدار 1.0.0 (Adhkar Sanctuary APK)" \
-            --notes "تطبيق أذكار الهادئ - أندرويد APK جاهز للتحميل والتثبيت المباشر على الهاتف. يتضمن: لوحة المتصدرين المفصولة للرجال والنساء، 20 صورة رمزية إسلامية، المسبحة الإلكترونية، والورد اليومي مع إدارة الصلاحيات للمشرف والمستخدم العادي." \
+          TAG_NAME="v${APP_VERSION}"
+          gh release delete "$TAG_NAME" --yes || true
+          git tag -d "$TAG_NAME" || true
+          gh release create "$TAG_NAME" "dist/adhkar-sanctuary-v${APP_VERSION}.apk" \
+            --title "تطبيق أذكار - الإصدار ${APP_VERSION} (Adhkar Sanctuary APK)" \
+            --notes "تطبيق أذكار الهادئ - الإصدار ${APP_VERSION} (بناء #${{ github.run_number }}). يدعم التحديث المباشر من داخل التطبيق، مواقيت الصلاة والأذان بصوت الحرم المكي، التقويم الهجري وتنبيهات الصيام، وأذكار الصباح والمساء." \
             --latest

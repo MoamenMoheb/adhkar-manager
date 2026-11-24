@@ -16,6 +16,13 @@ dependencies:
   flutter_svg: ^2.0.10+1
   shared_preferences: ^2.3.3
   intl: any
+  flutter_local_notifications: ^17.2.4
+  timezone: ^0.9.4
+  audioplayers: ^6.1.0
+  http: ^1.2.2
+  package_info_plus: ^8.0.2
+  path_provider: ^2.1.4
+  open_filex: ^4.5.0
 
 dev_dependencies:
   flutter_test:
@@ -26,3 +33,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/avatars/
+    - assets/icons/
+    - assets/data/
+    - assets/audio/

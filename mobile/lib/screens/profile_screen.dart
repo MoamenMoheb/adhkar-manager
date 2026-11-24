@@ -5,6 +5,8 @@ import '../core/constants/constants.dart';
 import '../services/supabase_service.dart';
 import 'admin_dashboard_screen.dart';
 import 'auth_screen.dart';
+import 'hijri_calendar_screen.dart';
+import '../services/app_update_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,6 +17,45 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final SupabaseService _service = SupabaseService.instance;
+  String _appVersion = '...';
+  bool _checkingUpdate = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AppUpdateService.instance.getCurrentVersion().then((v) {
+      if (mounted) setState(() => _appVersion = v);
+    });
+  }
+
+  Future<void> _checkUpdateManual() async {
+    if (_checkingUpdate) return;
+    setState(() => _checkingUpdate = true);
+    final update = await AppUpdateService.instance.checkForUpdate(force: true);
+    if (!mounted) return;
+    setState(() => _checkingUpdate = false);
+    if (update != null) {
+      await AppUpdateService.instance.showUpdateDialog(context, update);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('أنت تستخدم أحدث إصدار من التطبيق (v$_appVersion) ✅')),
+      );
+    }
+  }
+
+  Widget _buildUpdateTile() {
+    return ListTile(
+      tileColor: AppConstants.secondary.withOpacity(0.08),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      leading: _checkingUpdate
+          ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))
+          : const Icon(Icons.system_update, color: AppConstants.secondary),
+      title: const Text('تحديث التطبيق من الداخل', style: TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text('الإصدار الحالي: v$_appVersion • اضغط للتحقق من التحديثات', style: const TextStyle(fontSize: 11)),
+      trailing: const Icon(Icons.refresh, size: 18),
+      onTap: _checkUpdateManual,
+    );
+  }
 
   void _showAvatarPicker() {
     showModalBottomSheet(
@@ -126,6 +167,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthScreen())).then((_) => setState(() {}));
                 },
                 child: const Text('تسجيل الدخول / إنشاء حساب'),
+              ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _buildUpdateTile(),
               ),
             ],
           ),
@@ -277,6 +323,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
+          const SizedBox(height: 16),
+
+          // Hijri Calendar & Fasting Reminders Shortcut
+          ListTile(
+            tileColor: AppConstants.primary.withOpacity(0.06),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            leading: const Icon(Icons.calendar_month, color: AppConstants.primary),
+            title: const Text('التقويم الهجري وتنبيهات الصيام', style: TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: const Text('تذكير الإثنين والخميس والأيام البيض (١٣، ١٤، ١٥)', style: TextStyle(fontSize: 11)),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const HijriCalendarScreen()));
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // In-app Update Check Tile
+          _buildUpdateTile(),
           const SizedBox(height: 16),
 
           // Admin Dashboard Button (Only if user is Admin)

@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
+import '../core/utils/hijri_calendar.dart';
 
 class SupabaseService extends ChangeNotifier {
   static final SupabaseService instance = SupabaseService._internal();
@@ -107,6 +109,71 @@ class SupabaseService extends ChangeNotifier {
 
   static const int totalMaxDailyPoints = 155;
 
+  static const WorshipTaskModel _fastingMonThuTemplate = WorshipTaskModel(
+    key: 'fasting_mon_thu',
+    title: 'صيام الإثنين والخميس',
+    subtitle: 'تُعرض الأعمال يومي الإثنين والخميس فأحب أن يُعرض عملي وأنا صائم',
+    points: 25,
+    category: 'fasting',
+    categoryName: 'صيام التطوع والسنة',
+    icon: 'wb_twilight',
+  );
+
+  static const WorshipTaskModel _fastingAyyamBeedTemplate = WorshipTaskModel(
+    key: 'fasting_ayyam_beed',
+    title: 'صيام الأيام البيض (١٣-١٤-١٥)',
+    subtitle: 'صيام ثلاثة أيام من كل شهر هجري يعدل صيام الدهر كله',
+    points: 30,
+    category: 'fasting',
+    categoryName: 'صيام التطوع والسنة',
+    icon: 'brightness_3',
+  );
+
+  static List<WorshipTaskModel> getTodayWorshipTasks({int hijriOffset = 0, DateTime? date}) {
+    final target = date ?? DateTime.now();
+    final hijri = HijriCalendar.fromGregorian(target, offsetDays: hijriOffset);
+    final List<WorshipTaskModel> list = List<WorshipTaskModel>.from(worshipTasks);
+
+    if (hijri.isRecommendedMonThu) {
+      list.add(WorshipTaskModel(
+        key: _fastingMonThuTemplate.key,
+        title: hijri.isMonday ? 'صيام يوم الإثنين (سُنّة)' : 'صيام يوم الخميس (سُنّة)',
+        subtitle: _fastingMonThuTemplate.subtitle,
+        points: _fastingMonThuTemplate.points,
+        category: _fastingMonThuTemplate.category,
+        categoryName: _fastingMonThuTemplate.categoryName,
+        icon: _fastingMonThuTemplate.icon,
+      ));
+    }
+
+    if (hijri.isRecommendedAyyamBeed) {
+      list.add(WorshipTaskModel(
+        key: _fastingAyyamBeedTemplate.key,
+        title: 'صيام الأيام البيض (${hijri.day} ${hijri.monthName})',
+        subtitle: _fastingAyyamBeedTemplate.subtitle,
+        points: _fastingAyyamBeedTemplate.points,
+        category: _fastingAyyamBeedTemplate.category,
+        categoryName: _fastingAyyamBeedTemplate.categoryName,
+        icon: _fastingAyyamBeedTemplate.icon,
+      ));
+    }
+
+    return list;
+  }
+
+  static int getTodayMaxDailyPoints({int hijriOffset = 0, DateTime? date}) {
+    return getTodayWorshipTasks(hijriOffset: hijriOffset, date: date)
+        .fold<int>(0, (sum, t) => sum + t.points);
+  }
+
+  static WorshipTaskModel? findTaskByKey(String key, {int hijriOffset = 0}) {
+    final all = [...worshipTasks, _fastingMonThuTemplate, _fastingAyyamBeedTemplate];
+    for (final t in all) {
+      if (t.key == key) return t;
+    }
+    return null;
+  }
+
   Future<void> init() async {
     client.auth.onAuthStateChange.listen((data) async {
       if (data.session != null) {
@@ -156,7 +223,7 @@ class SupabaseService extends ChangeNotifier {
   }
 
   // ================= AUTH =================
-  Future<void> signUp({
+  Future<AuthResponse> signUp({
     required String email,
     required String password,
     required String displayName,
@@ -166,6 +233,7 @@ class SupabaseService extends ChangeNotifier {
     final res = await client.auth.signUp(
       email: email,
       password: password,
+      emailRedirectTo: 'https://moamenmoheb.github.io/adhkar-manager/auth-confirm.html',
       data: {
         'display_name': displayName,
         'full_name': displayName,
@@ -173,9 +241,10 @@ class SupabaseService extends ChangeNotifier {
         'avatar_id': avatarId,
       },
     );
-    if (res.user != null) {
+    if (res.session != null) {
       await loadCurrentProfile();
     }
+    return res;
   }
 
   Future<void> signIn({
@@ -268,7 +337,8 @@ class SupabaseService extends ChangeNotifier {
 
     if (currentUser != null) {
       try {
-        final task = worshipTasks.firstWhere((t) => t.key == key);
+        final task = findTaskByKey(key);
+        if (task == null) return;
         if (isCompleted) {
           await client.from('daily_worship_logs').upsert({
             'user_id': currentUser!.id,
@@ -421,16 +491,43 @@ class SupabaseService extends ChangeNotifier {
 
   // ================= ADHKAR CRUD (ADMIN) =================
   Future<List<DhikrModel>> fetchAdhkar() async {
+    final Map<String, DhikrModel> merged = {};
+
+    // 1. Load bundled local Adhkar & Hadiths database (includes full Morning/Evening Azkar)
+    try {
+      final rawJson = await rootBundle.loadString('assets/data/adhkar_data.json');
+      final decoded = jsonDecode(rawJson) as Map<String, dynamic>;
+      final items = decoded['adhkar'] as List<dynamic>? ?? [];
+      for (final raw in items) {
+        final model = DhikrModel.fromJson(raw as Map<String, dynamic>);
+        if (model.status == 'active') {
+          merged[model.id] = model;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading bundled adhkar_data.json: $e');
+    }
+
+    // 2. Overlay / merge any remote Adhkar from Supabase if available
     try {
       final res = await client.from('adhkar').select('*').order('created_at', ascending: true);
       if (res is List && res.isNotEmpty) {
-        return res.map((item) => DhikrModel.fromJson(item)).toList();
+        for (final item in res) {
+          final model = DhikrModel.fromJson(item as Map<String, dynamic>);
+          if (model.status == 'active') {
+            merged[model.id] = model;
+          }
+        }
       }
     } catch (e) {
-      debugPrint('Error fetching adhkar: $e');
+      debugPrint('Remote adhkar table notice: $e');
     }
 
-    // Default static seed list
+    if (merged.isNotEmpty) {
+      return merged.values.toList();
+    }
+
+    // Minimal emergency fallback
     return [
       DhikrModel(
         id: 'dhikr-1',
@@ -439,24 +536,6 @@ class SupabaseService extends ChangeNotifier {
         category: 'general',
         repeats: 100,
         virtue: 'كلمتان خفيفتان على اللسان، ثقيلتان في الميزان، حبيبتان إلى الرحمن.',
-        status: 'active',
-      ),
-      DhikrModel(
-        id: 'dhikr-2',
-        adminTitle: 'أحب الكلام إلى الله (الباقيات الصالحات)',
-        text: 'سُبْحَانَ اللَّهِ، وَالْحَمْدُ لِلَّهِ، وَلَا إِلَهَ إِلَّا اللَّهُ، وَاللَّهُ أَكْبَرُ',
-        category: 'general',
-        repeats: 33,
-        virtue: 'أحب إلى رسول الله ﷺ مما طلعت عليه الشمس.',
-        status: 'active',
-      ),
-      DhikrModel(
-        id: 'dhikr-3',
-        adminTitle: 'حرز اليوم وعتق الرقاب',
-        text: 'لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ',
-        category: 'morning_evening',
-        repeats: 100,
-        virtue: 'من قالها مائة مرة كانت له عدل عشر رقاب، ومائة حسنة، ومحيت عنه مائة سيئة.',
         status: 'active',
       ),
     ];

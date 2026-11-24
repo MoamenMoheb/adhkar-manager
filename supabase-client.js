@@ -99,7 +99,56 @@ const WORSHIP_TASKS = [
   }
 ];
 
-const TOTAL_DAILY_MAX_POINTS = WORSHIP_TASKS.reduce((acc, t) => acc + t.points, 0); // 155 pts
+const TOTAL_DAILY_MAX_POINTS = WORSHIP_TASKS.reduce((acc, t) => acc + t.points, 0); // 155 base pts
+
+const FASTING_MON_THU_TEMPLATE = {
+  key: 'fasting_mon_thu',
+  title: 'صيام الإثنين والخميس',
+  subtitle: 'تُعرض الأعمال يومي الإثنين والخميس فأحب أن يُعرض عملي وأنا صائم',
+  points: 25,
+  category: 'fasting',
+  categoryName: 'صيام التطوع والسنة',
+  icon: 'wb_twilight'
+};
+
+const FASTING_AYYAM_BEED_TEMPLATE = {
+  key: 'fasting_ayyam_beed',
+  title: 'صيام الأيام البيض (١٣-١٤-١٥)',
+  subtitle: 'صيام ثلاثة أيام من كل شهر هجري يعدل صيام الدهر كله',
+  points: 30,
+  category: 'fasting',
+  categoryName: 'صيام التطوع والسنة',
+  icon: 'brightness_3'
+};
+
+function getTodayWorshipTasks(date = new Date()) {
+  const list = [...WORSHIP_TASKS];
+  if (typeof HijriCalendarHelper !== 'undefined') {
+    const hijri = HijriCalendarHelper.fromGregorian(date);
+    if (hijri.isRecommendedMonThu) {
+      list.push({
+        ...FASTING_MON_THU_TEMPLATE,
+        title: hijri.isMonday ? 'صيام يوم الإثنين (سُنّة)' : 'صيام يوم الخميس (سُنّة)'
+      });
+    }
+    if (hijri.isRecommendedAyyamBeed) {
+      list.push({
+        ...FASTING_AYYAM_BEED_TEMPLATE,
+        title: `صيام الأيام البيض (${hijri.day} ${hijri.monthName})`
+      });
+    }
+  }
+  return list;
+}
+
+function getTodayMaxDailyPoints(date = new Date()) {
+  return getTodayWorshipTasks(date).reduce((acc, t) => acc + t.points, 0);
+}
+
+function findWorshipTaskByKey(key) {
+  const all = [...WORSHIP_TASKS, FASTING_MON_THU_TEMPLATE, FASTING_AYYAM_BEED_TEMPLATE];
+  return all.find(t => t.key === key) || null;
+}
 
 // Central Supabase Production Config (Client-Safe Publishable Key)
 const DEFAULT_SUPABASE_CONFIG = {
@@ -267,6 +316,7 @@ class SupabaseService {
       email,
       password,
       options: {
+        emailRedirectTo: 'https://moamenmoheb.github.io/adhkar-manager/auth-confirm.html',
         data: {
           display_name: displayName,
           full_name: displayName
@@ -276,7 +326,7 @@ class SupabaseService {
 
     if (error) throw error;
     this.currentUser = data.user;
-    if (this.currentUser) {
+    if (data.session) {
       await this.loadCurrentProfile();
     }
     return data;
@@ -372,7 +422,7 @@ class SupabaseService {
   }
 
   async toggleWorshipTask(worshipKey, isCompleted) {
-    const task = WORSHIP_TASKS.find(t => t.key === worshipKey);
+    const task = findWorshipTaskByKey(worshipKey);
     if (!task) return { success: false };
 
     const todayStr = this.getTodayDateString();

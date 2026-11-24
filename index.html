@@ -6,8 +6,9 @@
   <title>أذكار | لوحة إدارة وتوثيق متون الأذكار والأحاديث النبوية</title>
   <meta name="description" content="تطبيق لوحة تحكم وإدارة الأذكار النبوية والأحاديث وتخريجها ومصادرها - متوافق مع كافة الأجهزة ومستضاف على GitHub Pages"/>
   
-  <!-- Favicon SVG -->
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23003527'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z'/%3E%3C/svg%3E">
+  <!-- App Favicon & Touch Icons -->
+  <link rel="icon" type="image/png" href="assets/icons/app_icon_512.png"/>
+  <link rel="apple-touch-icon" href="assets/icons/app_icon_512.png"/>
 
   <!-- Google Fonts & Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -252,6 +253,14 @@
           <span class="material-symbols-outlined text-[19px]" id="headerSyncIcon">cloud_sync</span>
           <span id="headerSyncDot" class="absolute top-1 right-1 w-2 h-2 rounded-full bg-outline"></span>
         </button>
+        <button onclick="navigateTo('prayers')" title="مواقيت الصلاة والأذان" class="inline-flex items-center gap-1.5 bg-surface-container-low hover:bg-surface-container text-primary border border-surface-container-high px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-all active:scale-95 cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">mosque</span>
+          <span class="hidden sm:inline">الأذان</span>
+        </button>
+        <button onclick="navigateTo('calendar')" title="التقويم الهجري وتنبيهات الصيام" class="inline-flex items-center gap-1.5 bg-surface-container-low hover:bg-surface-container text-primary border border-surface-container-high px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-2xs transition-all active:scale-95 cursor-pointer">
+          <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+          <span class="hidden sm:inline">التقويم</span>
+        </button>
         <button onclick="navigateTo('misbaha')" title="المسبحة الإلكترونية" class="inline-flex items-center gap-1.5 bg-gradient-to-r from-primary to-secondary text-white hover:opacity-95 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-95">
           <span class="material-symbols-outlined text-[18px]">touch_app</span>
           <span>المسبحة</span>
@@ -290,10 +299,10 @@
               <h1 class="text-xl sm:text-2xl font-headline font-bold text-on-surface">مرحبًا بك في لوحة تحكم أذكار</h1>
               <p class="text-xs sm:text-sm text-on-surface-variant mt-1">سجل المراجعة والتوثيق الشامل للأوراد النبوية وصحيح المأثورات مع أحاديثها ومصادرها</p>
             </div>
-            <div class="inline-flex items-center gap-2 self-start sm:self-auto px-3.5 py-2 rounded-xl bg-surface-container text-on-surface-variant shadow-sm border border-surface-container-high">
+            <button onclick="navigateTo('calendar')" title="فتح التقويم الهجري وتنبيهات الصيام" class="inline-flex items-center gap-2 self-start sm:self-auto px-3.5 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface-variant shadow-sm border border-surface-container-high transition-all active:scale-95 cursor-pointer">
               <span class="material-symbols-outlined text-[18px] text-primary">calendar_month</span>
-              <span class="text-xs font-semibold" id="overviewDateDisplay">١٥ رجب ١٤٤٦ هـ</span>
-            </div>
+              <span class="text-xs font-semibold" id="overviewDateDisplay">١٤ جمادى الآخرة ١٤٤٨ هـ</span>
+            </button>
           </div>
         </div>
       </div>
@@ -394,6 +403,28 @@
               </div>
             </div>
             <span class="material-symbols-outlined text-[15px]">arrow_back_ios_new</span>
+          </button>
+
+          <button onclick="navigateTo('prayers')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all cursor-pointer">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[20px] text-primary">mosque</span>
+              <div class="flex flex-col text-right">
+                <span class="text-xs font-semibold leading-tight">مواقيت الصلاة</span>
+                <span class="text-[10px] text-outline">الأذان والصلوات الخمس والشروق</span>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-[15px] text-outline">arrow_back_ios_new</span>
+          </button>
+
+          <button onclick="navigateTo('calendar')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all cursor-pointer">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[20px] text-tertiary">calendar_month</span>
+              <div class="flex flex-col text-right">
+                <span class="text-xs font-semibold leading-tight">التقويم الهجري</span>
+                <span class="text-[10px] text-outline">تذكير الإثنين والخميس والبيض</span>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-[15px] text-outline">arrow_back_ios_new</span>
           </button>
 
           <button onclick="navigateTo('misbaha')" class="flex items-center justify-between px-3.5 py-3 rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high active:scale-[0.99] transition-all">
@@ -748,12 +779,19 @@
         </div>
 
         <!-- Category Dropdown Selector -->
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <label for="misbahaCategorySelect" class="text-xs font-semibold text-on-surface shrink-0">اختر النوع:</label>
           <select id="misbahaCategorySelect" onchange="handleMisbahaCategoryChange(this.value)" class="bg-surface-container-low text-on-surface px-3 py-1.5 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer border border-surface-container-high">
             <!-- Populated dynamically with categories -->
           </select>
         </div>
+      </div>
+
+      <!-- Sub-filter Bar for Morning / Evening Adhkar -->
+      <div id="misbahaTimeFilterBar" class="hidden bg-surface-container-lowest p-2 rounded-xl shadow-xs border border-surface-container-high/40 flex items-center gap-2">
+        <button onclick="handleMisbahaTimeFilterChange('all')" id="misbahaFilter-all" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-bold bg-primary text-white transition-all cursor-pointer">الكل</button>
+        <button onclick="handleMisbahaTimeFilterChange('morning')" id="misbahaFilter-morning" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high transition-all cursor-pointer">☀️ أذكار الصباح</button>
+        <button onclick="handleMisbahaTimeFilterChange('evening')" id="misbahaFilter-evening" class="flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold bg-surface-container text-on-surface hover:bg-surface-container-high transition-all cursor-pointer">🌙 أذكار المساء</button>
       </div>
 
       <!-- Overall Category Progress Bar -->
@@ -1000,6 +1038,9 @@
         </button>
       </div>
 
+      <!-- Hijri Date & Fasting Reminder Strip -->
+      <div id="worshipHijriBanner" class="hidden"></div>
+
       <!-- Categories Checklist -->
       <div class="space-y-5" id="worshipChecklistContainer">
         <!-- Rendered dynamically via JS: Prayers, Nawafil, Morning/Evening Adhkar, Quran, Sadaqah -->
@@ -1092,6 +1133,179 @@
         </div>
         <div class="divide-y divide-surface-container" id="leaderboardListContainer">
           <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 7: HIJRI CALENDAR & FASTING REMINDERS ================= -->
+    <section id="viewCalendar" class="space-y-6 hidden animate-fade-in">
+      <!-- Hijri Today Hero Card -->
+      <div id="calendarHeroBanner" class="relative overflow-hidden rounded-2xl bg-gradient-to-l from-primary via-primary-container to-primary-container text-white p-5 sm:p-6 shadow-md border border-primary-fixed/20">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Interactive Hijri Month Grid -->
+      <div class="bg-surface-container-lowest rounded-2xl p-4 sm:p-6 shadow-sm border border-surface-container-high/60 space-y-4">
+        <div class="flex items-center justify-between gap-2">
+          <button onclick="changeHijriMonth(-1)" class="p-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface transition-all cursor-pointer" title="الشهر السابق">
+            <span class="material-symbols-outlined text-[20px]">chevron_right</span>
+          </button>
+          <div class="text-center">
+            <h2 id="calendarMonthTitle" class="font-headline font-bold text-base sm:text-lg text-primary">جمادى الآخرة ١٤٤٨ هـ</h2>
+            <button onclick="goToTodayHijri()" class="text-[11px] font-semibold text-secondary hover:underline cursor-pointer">الانتقال لليوم</button>
+          </div>
+          <button onclick="changeHijriMonth(1)" class="p-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface transition-all cursor-pointer" title="الشهر التالي">
+            <span class="material-symbols-outlined text-[20px]">chevron_left</span>
+          </button>
+        </div>
+
+        <!-- Weekday Headers -->
+        <div class="grid grid-cols-7 gap-1.5 text-center text-[11px] font-bold text-on-surface-variant pb-1 border-b border-surface-container">
+          <div>السبت</div>
+          <div>الأحد</div>
+          <div class="text-secondary">الإثنين</div>
+          <div>الثلاثاء</div>
+          <div>الأربعاء</div>
+          <div class="text-secondary">الخميس</div>
+          <div>الجمعة</div>
+        </div>
+
+        <!-- Days Grid -->
+        <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1.5 sm:gap-2">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Legend -->
+        <div class="flex flex-wrap items-center justify-center gap-4 pt-3 border-t border-surface-container text-[11px] text-on-surface-variant">
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-primary inline-block"></span><span>اليوم</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span><span>الأيام البيض (١٣، ١٤، ١٥ هـ)</span></div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-secondary inline-block"></span><span>صيام الإثنين والخميس</span></div>
+        </div>
+      </div>
+
+      <!-- Selected Day Details -->
+      <div id="calendarSelectedDayCard" class="bg-surface-container-lowest rounded-2xl p-4 sm:p-5 shadow-sm border border-primary/20">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Browser Notification Settings Card -->
+      <div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-surface-container-high/60 space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-[22px]">notifications_active</span>
+          </div>
+          <div>
+            <h3 class="font-headline font-bold text-sm sm:text-base text-on-surface">تنبيهات وتذكير صيام السُنّة</h3>
+            <p class="text-[11px] text-on-surface-variant">تذكير الإثنين والخميس والأيام البيض (١٣، ١٤، ١٥ هـ) وإضافتها تلقائياً لنقاط الورد اليومي</p>
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-surface-container">
+          <div class="space-y-1">
+            <div class="text-xs font-bold text-on-surface">إشعارات المتصفح التلقائية</div>
+            <div class="text-[11px] text-on-surface-variant" id="webNotifStatusText">حالة الإشعارات: غير مفعلة</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="enableWebFastingNotifs()" class="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all cursor-pointer">
+              تفعيل التنبيهات
+            </button>
+            <button onclick="testWebFastingNotif()" class="px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-all cursor-pointer">
+              تجربة التنبيه
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Morning & Evening Adhkar Notification Settings Card (Shuruq & Maghrib - 30m) -->
+      <div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-surface-container-high/60 space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-[22px]">wb_twilight</span>
+          </div>
+          <div>
+            <h3 class="font-headline font-bold text-sm sm:text-base text-on-surface">تنبيهات أذكار الصباح والمساء (الشروق والمغرب)</h3>
+            <p class="text-[11px] text-on-surface-variant">تنبيه قبل الشروق بـ ٣٠ دقيقة وقبل المغرب بـ ٣٠ دقيقة — يفتح المسبحة مباشرة مع الأذكار</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-surface-container">
+          <div class="space-y-1">
+            <label for="webSunCitySelect" class="text-xs font-bold text-on-surface">المدينة لحساب المواقيت:</label>
+            <select id="webSunCitySelect" onchange="handleWebCityChange(this.value)" class="w-full bg-surface-container-low text-on-surface px-3 py-2 rounded-xl text-xs font-semibold border border-surface-container-high focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+          <div id="webSunTimesBox" class="p-3 rounded-xl bg-surface-container-low border border-surface-container-high text-xs space-y-1">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 pt-1">
+          <button onclick="testWebAdhkarNotif('morning')" class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 text-xs font-bold transition-all cursor-pointer">
+            ☀️ تجربة إشعار الصباح (يفتح المسبحة)
+          </button>
+          <button onclick="testWebAdhkarNotif('evening')" class="px-3.5 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-all cursor-pointer">
+            🌙 تجربة إشعار المساء (يفتح المسبحة)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 8: PRAYER TIMES & AZAN ================= -->
+    <section id="viewPrayers" class="space-y-6 hidden animate-fade-in">
+      <!-- Next Prayer Hero Banner & Azan Player -->
+      <div id="prayerHeroBanner" class="relative overflow-hidden rounded-2xl bg-gradient-to-l from-primary via-primary-container to-primary-container text-white p-5 sm:p-6 shadow-md border border-primary-fixed/20">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- 5 Prayers + Sunrise Grid -->
+      <div id="prayerTimesListCard" class="bg-surface-container-lowest rounded-2xl p-4 sm:p-5 shadow-sm border border-surface-container-high/60 space-y-2">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Azan Sound & Calculation Settings -->
+      <div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-surface-container-high/60 space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <span class="material-symbols-outlined text-[22px]">volume_up</span>
+          </div>
+          <div>
+            <h3 class="font-headline font-bold text-sm sm:text-base text-on-surface">إعدادات صوت الأذان ومواقيت الصلاة</h3>
+            <p class="text-[11px] text-on-surface-variant">تنبيهات الصلوات الخمس والشروق بصوت أذان الحرم المكي أو التكبيرة أو نغمة الإشعار</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-surface-container">
+          <div class="space-y-1">
+            <label for="webPrayerCitySelect" class="text-xs font-bold text-on-surface">المدينة:</label>
+            <select id="webPrayerCitySelect" onchange="handleWebCityChange(this.value); renderPrayersView();" class="w-full bg-surface-container-low text-on-surface px-3 py-2 rounded-xl text-xs font-semibold border border-surface-container-high cursor-pointer"></select>
+          </div>
+          <div class="space-y-1">
+            <label for="webPrayerMethodSelect" class="text-xs font-bold text-on-surface">طريقة الحساب:</label>
+            <select id="webPrayerMethodSelect" onchange="handleWebPrayerMethodChange(this.value)" class="w-full bg-surface-container-low text-on-surface px-3 py-2 rounded-xl text-xs font-semibold border border-surface-container-high cursor-pointer"></select>
+          </div>
+          <div class="space-y-1">
+            <label for="webPrayerSoundSelect" class="text-xs font-bold text-on-surface">صوت التنبيه:</label>
+            <select id="webPrayerSoundSelect" onchange="handleWebPrayerSoundChange(this.value)" class="w-full bg-surface-container-low text-on-surface px-3 py-2 rounded-xl text-xs font-semibold border border-surface-container-high cursor-pointer">
+              <option value="azan">🕌 صوت الأذان الكامل (الحرم المكي)</option>
+              <option value="takbeer">🔔 تكبيرة الأذان (١٠ ثوانٍ)</option>
+              <option value="default">🔊 نغمة الإشعار فقط</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-surface-container">
+          <label class="inline-flex items-center gap-2 text-xs font-semibold cursor-pointer">
+            <input type="checkbox" id="webHanafiAsrCheckbox" onchange="handleWebHanafiAsrChange(this.checked)" class="rounded border-outline text-primary"/>
+            <span>المذهب الحنفي لصلاة العصر</span>
+          </label>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="toggleWebAzanAudio()" id="webAzanPreviewBtn" class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 text-xs font-bold transition-all cursor-pointer">
+              🕌 تشغيل / إيقاف الأذان
+            </button>
+            <button onclick="testWebPrayerNotification()" class="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all cursor-pointer">
+              🔔 تجربة إشعار الصلاة
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -1505,6 +1719,9 @@
   </div>
 
   <!-- Load Application Logic -->
+  <script src="hijri-calendar.js"></script>
+  <script src="sun-times.js"></script>
+  <script src="prayer-times.js"></script>
   <script src="supabase-client.js"></script>
   <script src="app.js"></script>
 </body>

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/constants.dart';
 import 'services/supabase_service.dart';
+import 'services/notification_service.dart';
 import 'screens/main_shell.dart';
 import 'screens/auth_screen.dart';
 
@@ -16,6 +17,7 @@ void main() async {
   );
 
   await SupabaseService.instance.init();
+  await NotificationService.instance.init();
 
   runApp(const AdhkarApp());
 }
