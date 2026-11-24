@@ -519,6 +519,9 @@ class SupabaseService {
           await this.respondToFriendRequest(existing.id, true);
           return { acceptedDirectly: true, targetProfile };
         }
+      } else if (existing.status === 'declined') {
+        // Remove stale declined record so user can send a fresh request
+        await this.client.from('friendships').delete().eq('id', existing.id);
       }
     }
 
@@ -565,13 +568,22 @@ class SupabaseService {
 
   async respondToFriendRequest(friendshipId, accept) {
     if (!this.isConfigured || !this.currentUser || !this.client) return false;
-    const newStatus = accept ? 'accepted' : 'declined';
-    const { error } = await this.client
-      .from('friendships')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
-      .eq('id', friendshipId);
+    if (accept) {
+      const { error } = await this.client
+        .from('friendships')
+        .update({ status: 'accepted', updated_at: new Date().toISOString() })
+        .eq('id', friendshipId);
 
-    if (error) throw error;
+      if (error) throw error;
+    } else {
+      // Delete declined request so either user can send a new request later
+      const { error } = await this.client
+        .from('friendships')
+        .delete()
+        .eq('id', friendshipId);
+
+      if (error) throw error;
+    }
     return true;
   }
 

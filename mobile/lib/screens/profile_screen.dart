@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
@@ -6,6 +7,7 @@ import '../services/supabase_service.dart';
 import 'admin_dashboard_screen.dart';
 import 'auth_screen.dart';
 import 'hijri_calendar_screen.dart';
+import 'friends_screen.dart';
 import '../services/app_update_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -266,6 +268,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   IconButton(
                     icon: Icon(Icons.copy, color: AppConstants.textPrimary(context)),
                     onPressed: () {
+                      final code = profile?.friendCode ?? '';
+                      if (code.isNotEmpty) {
+                        Clipboard.setData(ClipboardData(text: code));
+                      }
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ كود الصداقة بنجاح 📋')));
                     },
                   ),
@@ -338,6 +344,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
+          const SizedBox(height: 16),
+
+          // Friends & Requests Shortcut
+          ListTile(
+            tileColor: AppConstants.cardSurface(context),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppConstants.borderColor(context)),
+            ),
+            leading: Icon(Icons.group_add, color: AppConstants.textPrimary(context)),
+            title: Text('الأصدقاء وطلبات الصداقة', style: TextStyle(fontWeight: FontWeight.bold, color: AppConstants.textPrimary(context))),
+            subtitle: Text('إضافة صديق، قبول أو رفض الطلبات، وإزالة الأصدقاء', style: TextStyle(fontSize: 11, color: AppConstants.textSecondary(context))),
+            trailing: Icon(Icons.arrow_forward_ios, size: 16, color: AppConstants.textSecondary(context)),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsScreen()));
+            },
+          ),
           const SizedBox(height: 16),
 
           // Hijri Calendar & Fasting Reminders Shortcut

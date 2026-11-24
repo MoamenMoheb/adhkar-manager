@@ -362,9 +362,10 @@ class SupabaseService extends ChangeNotifier {
   }
 
   // ================= FRIENDSHIPS & SOCIAL =================
-  Future<void> sendFriendRequestByCode(String code) async {
+  Future<String> sendFriendRequestByCode(String code) async {
     if (currentUser == null) throw Exception('يجب تسجيل الدخول لإرسال طلب صداقة');
     final cleanCode = code.trim().toUpperCase();
+    if (cleanCode.isEmpty) throw Exception('يرجى إدخال كود الصداقة');
 
     final target = await client
         .from('profiles')
@@ -373,13 +374,38 @@ class SupabaseService extends ChangeNotifier {
         .maybeSingle();
 
     if (target == null) throw Exception('لم يتم العثور على مستخدم بهذا الكود');
-    if (target['id'] == currentUser!.id) throw Exception('لا يمكنك إرسال طلب صداقة لنفسك');
+    final targetId = target['id'] as String;
+    final targetName = (target['display_name'] ?? 'المستخدم').toString();
+    if (targetId == currentUser!.id) throw Exception('لا يمكنك إرسال طلب صداقة لنفسك');
+
+    final existing = await client
+        .from('friendships')
+        .select('id, status, user_id, friend_id')
+        .or('and(user_id.eq.${currentUser!.id},friend_id.eq.$targetId),and(user_id.eq.$targetId,friend_id.eq.${currentUser!.id})')
+        .maybeSingle();
+
+    if (existing != null) {
+      final status = existing['status']?.toString();
+      if (status == 'accepted') {
+        throw Exception('أنت و $targetName أصدقاء بالفعل!');
+      } else if (status == 'pending') {
+        if (existing['user_id'] == currentUser!.id) {
+          throw Exception('تم إرسال طلب الصداقة مسبقاً وهو بانتظار القبول');
+        } else {
+          await respondToFriendRequest(existing['id'].toString(), true);
+          return 'تم قبول طلب الصداقة الوارد من $targetName مباشرة!';
+        }
+      } else if (status == 'declined') {
+        await client.from('friendships').delete().eq('id', existing['id']);
+      }
+    }
 
     await client.from('friendships').insert({
       'user_id': currentUser!.id,
-      'friend_id': target['id'],
+      'friend_id': targetId,
       'status': 'pending',
     });
+    return 'تم إرسال طلب الصداقة إلى $targetName بنجاح';
   }
 
   Future<List<Map<String, dynamic>>> fetchFriendRequests() async {
@@ -387,7 +413,7 @@ class SupabaseService extends ChangeNotifier {
     try {
       final res = await client
           .from('friendships')
-          .select('id, user_id, status, sender:profiles!friendships_user_id_fkey(id, display_name, avatar_id, friend_code, total_points)')
+          .select('id, user_id, status, sender:profiles!friendships_user_id_fkey(id, display_name, avatar_id, friend_code, total_points, streak_count)')
           .eq('friend_id', currentUser!.id)
           .eq('status', 'pending');
       return List<Map<String, dynamic>>.from(res);
@@ -397,34 +423,68 @@ class SupabaseService extends ChangeNotifier {
     }
   }
 
-  Future<void> respondToFriendRequest(String id, bool accept) async {
-    await client
-        .from('friendships')
-        .update({'status': accept ? 'accepted' : 'declined', 'updated_at': DateTime.now().toIso8601String()})
-        .eq('id', id);
-  }
-
-  Future<List<ProfileModel>> fetchFriendsList() async {
+  Future<List<Map<String, dynamic>>> fetchSentFriendRequests() async {
     if (currentUser == null) return [];
     try {
       final res = await client
           .from('friendships')
-          .select('user_id, friend_id, requester:profiles!friendships_user_id_fkey(*), recipient:profiles!friendships_friend_id_fkey(*)')
+          .select('id, friend_id, status, recipient:profiles!friendships_friend_id_fkey(id, display_name, avatar_id, friend_code, total_points, streak_count)')
+          .eq('user_id', currentUser!.id)
+          .eq('status', 'pending');
+      return List<Map<String, dynamic>>.from(res);
+    } catch (e) {
+      debugPrint('Error fetching sent requests: $e');
+      return [];
+    }
+  }
+
+  Future<void> respondToFriendRequest(String id, bool accept) async {
+    if (accept) {
+      await client
+          .from('friendships')
+          .update({'status': 'accepted', 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', id);
+    } else {
+      await client.from('friendships').delete().eq('id', id);
+    }
+    notifyListeners();
+  }
+
+  Future<void> removeFriend(String friendshipId) async {
+    if (currentUser == null) return;
+    await client.from('friendships').delete().eq('id', friendshipId);
+    notifyListeners();
+  }
+
+  Future<List<Map<String, dynamic>>> fetchFriendsWithIds() async {
+    if (currentUser == null) return [];
+    try {
+      final res = await client
+          .from('friendships')
+          .select('id, user_id, friend_id, requester:profiles!friendships_user_id_fkey(*), recipient:profiles!friendships_friend_id_fkey(*)')
           .eq('status', 'accepted')
           .or('user_id.eq.${currentUser!.id},friend_id.eq.${currentUser!.id}');
 
-      final List<ProfileModel> list = [];
+      final List<Map<String, dynamic>> list = [];
       for (var f in res) {
         final profileData = f['user_id'] == currentUser!.id ? f['recipient'] : f['requester'];
         if (profileData != null) {
-          list.add(ProfileModel.fromJson(profileData));
+          list.add({
+            'friendship_id': f['id'].toString(),
+            'profile': ProfileModel.fromJson(profileData),
+          });
         }
       }
       return list;
     } catch (e) {
-      debugPrint('Error fetching friends: $e');
+      debugPrint('Error fetching friends with ids: $e');
       return [];
     }
+  }
+
+  Future<List<ProfileModel>> fetchFriendsList() async {
+    final rows = await fetchFriendsWithIds();
+    return rows.map((r) => r['profile'] as ProfileModel).toList();
   }
 
   // ================= LEADERBOARD =================

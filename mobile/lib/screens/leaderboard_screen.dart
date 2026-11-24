@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
+import 'friends_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -18,13 +19,25 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   String _selectedGender = 'male'; // 'male' or 'female'
   String _timeframe = 'today'; // 'today', 'week', 'month', 'all'
   List<LeaderboardEntry> _entries = [];
+  List<Map<String, dynamic>> _pendingRequests = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _selectedGender = _service.currentProfile?.gender ?? 'male';
+    _service.addListener(_onServiceChanged);
     _loadLeaderboard();
+  }
+
+  @override
+  void dispose() {
+    _service.removeListener(_onServiceChanged);
+    super.dispose();
+  }
+
+  void _onServiceChanged() {
+    if (mounted) _loadLeaderboard();
   }
 
   Future<void> _loadLeaderboard() async {
@@ -34,10 +47,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       onlyFriends: _onlyFriends,
       gender: _selectedGender,
     );
+    final reqs = await _service.fetchFriendRequests();
+    if (!mounted) return;
     setState(() {
       _entries = data;
+      _pendingRequests = reqs;
       _loading = false;
     });
+  }
+
+  Future<void> _openFriendsManager() async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const FriendsScreen()));
+    await _loadLeaderboard();
   }
 
   @override
@@ -50,9 +71,63 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       appBar: AppBar(
         title: Text('لوحة المتصدرين', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.group_add),
+                tooltip: 'إضافة وإدارة الأصدقاء',
+                onPressed: _openFriendsManager,
+              ),
+              if (_pendingRequests.isNotEmpty)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                    child: Text(
+                      '${_pendingRequests.length}',
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
       body: Column(
         children: [
+          if (_pendingRequests.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: InkWell(
+                onTap: _openFriendsManager,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppConstants.activeSurface(context),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppConstants.borderColor(context)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.notifications_active, size: 18, color: primaryTxt),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'لديك ${_pendingRequests.length} طلب صداقة جديد — اضغط للقبول أو الرفض',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt),
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, size: 18, color: secondaryTxt),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
