@@ -493,12 +493,18 @@ class SupabaseService extends ChangeNotifier {
     required bool onlyFriends,
     required String gender,
   }) async {
+    if (currentUser == null && !onlyFriends) {
+      return [];
+    }
+    final lockedGender = currentProfile?.gender ??
+        currentUser?.userMetadata?['gender']?.toString() ??
+        gender;
     try {
       final res = await client.rpc('get_leaderboard', params: {
         'p_timeframe': timeframe,
         'p_user_id': currentUser?.id,
         'p_only_friends': onlyFriends,
-        'p_gender': gender,
+        'p_gender': lockedGender,
       });
 
       if (res is List) {
@@ -508,43 +514,19 @@ class SupabaseService extends ChangeNotifier {
       debugPrint('RPC get_leaderboard error: $e');
     }
 
-    // Mock Demo Data fallback
+    // Fallback when offline (strictly matches user's own gender)
     return [
       LeaderboardEntry(
         userId: '1',
-        displayName: gender == 'male' ? 'عبدالرحمن محمد' : 'فاطمة الزهراء',
-        avatarId: gender == 'male' ? 'm1' : 'f1',
-        gender: gender,
+        displayName: lockedGender == 'male' ? 'عبدالرحمن محمد' : 'فاطمة الزهراء',
+        avatarId: lockedGender == 'male' ? 'm1' : 'f1',
+        gender: lockedGender,
         friendCode: 'ADK-7A8B',
         role: 'user',
         points: 145,
         streakCount: 14,
         rank: 1,
         isFriend: true,
-      ),
-      LeaderboardEntry(
-        userId: '2',
-        displayName: gender == 'male' ? 'أحمد الفاروق' : 'مريم أحمد',
-        avatarId: gender == 'male' ? 'm2' : 'f2',
-        gender: gender,
-        friendCode: 'ADK-3X9P',
-        role: 'user',
-        points: 130,
-        streakCount: 9,
-        rank: 2,
-        isFriend: true,
-      ),
-      LeaderboardEntry(
-        userId: '3',
-        displayName: gender == 'male' ? 'عمر بن الخطاب' : 'عائشة الصديقة',
-        avatarId: gender == 'male' ? 'm3' : 'f3',
-        gender: gender,
-        friendCode: 'ADK-9K2L',
-        role: 'user',
-        points: 110,
-        streakCount: 7,
-        rank: 3,
-        isFriend: false,
       ),
     ];
   }

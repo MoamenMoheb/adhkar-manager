@@ -307,11 +307,11 @@ class SupabaseService {
   }
 
   // ================= AUTH METHODS =================
-  async signUp(email, password, displayName) {
+  async signUp(email, password, displayName, gender = 'male') {
     if (!this.isConfigured || !this.client) {
       throw new Error('لم يتم ربط مشروع Supabase بعد. يرجى إدخال الرابط ومفتاح API في الإعدادات.');
     }
-
+    const safeGender = gender === 'female' ? 'female' : 'male';
     const { data, error } = await this.client.auth.signUp({
       email,
       password,
@@ -319,7 +319,9 @@ class SupabaseService {
         emailRedirectTo: 'https://moamenmoheb.github.io/adhkar-manager/auth-confirm.html',
         data: {
           display_name: displayName,
-          full_name: displayName
+          full_name: displayName,
+          gender: safeGender,
+          avatar_id: safeGender === 'female' ? 'f1' : 'm1'
         }
       }
     });
@@ -634,6 +636,12 @@ class SupabaseService {
 
   // ================= LEADERBOARD =================
   async fetchLeaderboard(timeframe = 'today', onlyFriends = false) {
+    // Global dashboard is strictly scoped to signed-in user's own gender
+    if (!onlyFriends && !this.currentUser) {
+      return [];
+    }
+    const lockedGender = this.currentProfile?.gender || this.currentUser?.user_metadata?.gender || null;
+
     // If Supabase is connected
     if (this.isConfigured && this.client) {
       try {
@@ -643,20 +651,25 @@ class SupabaseService {
         const { data, error } = await this.client.rpc('get_leaderboard', {
           p_timeframe: timeframe,
           p_user_id: userId,
-          p_only_friends: onlyFriends
+          p_only_friends: onlyFriends,
+          p_gender: lockedGender
         });
 
         if (!error && Array.isArray(data)) {
           return data;
         }
 
-        // Fallback: direct query on profiles
+        // Fallback: direct query on profiles filtered by gender
         console.warn('RPC get_leaderboard fallback to direct query:', error?.message);
         let query = this.client
           .from('profiles')
-          .select('id, display_name, avatar_url, friend_code, total_points, streak_count')
+          .select('id, display_name, avatar_url, friend_code, total_points, streak_count, gender')
           .order('total_points', { ascending: false })
           .limit(50);
+
+        if (!onlyFriends && lockedGender) {
+          query = query.eq('gender', lockedGender);
+        }
 
         const { data: fallbackProfiles, error: fbErr } = await query;
         if (fbErr) throw fbErr;
@@ -676,7 +689,7 @@ class SupabaseService {
       }
     }
 
-    // Demo / Offline Mock Leaderboard to showcase the stunning UI
+    // Demo / Offline Mock Leaderboard to showcase the UI
     return this.getMockLeaderboard(timeframe, onlyFriends);
   }
 

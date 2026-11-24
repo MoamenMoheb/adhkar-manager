@@ -20,8 +20,14 @@ class SunTimesResult {
 
   const SunTimesResult({required this.sunrise, required this.sunset});
 
-  DateTime get morningAdhkarReminder => sunrise.subtract(const Duration(minutes: 30));
-  DateTime get eveningAdhkarReminder => sunset.subtract(const Duration(minutes: 30));
+  DateTime morningReminder({int minutesBefore = 30}) =>
+      sunrise.subtract(Duration(minutes: minutesBefore.clamp(1, 180)));
+
+  DateTime eveningReminder({int minutesBefore = 30}) =>
+      sunset.subtract(Duration(minutes: minutesBefore.clamp(1, 180)));
+
+  DateTime get morningAdhkarReminder => morningReminder(minutesBefore: 30);
+  DateTime get eveningAdhkarReminder => eveningReminder(minutesBefore: 30);
 }
 
 class SunTimesCalculator {

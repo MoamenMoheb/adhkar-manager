@@ -49,6 +49,23 @@ class AdhkarApp extends StatelessWidget {
         brightness: Brightness.light,
         colorSchemeSeed: AppConstants.primary,
         scaffoldBackgroundColor: AppConstants.surfaceLight,
+        switchTheme: SwitchThemeData(
+          thumbColor: MaterialStateProperty.resolveWith((states) {
+            return states.contains(MaterialState.selected) ? Colors.white : const Color(0xFF6B7280);
+          }),
+          trackColor: MaterialStateProperty.resolveWith((states) {
+            return states.contains(MaterialState.selected) ? AppConstants.primary : const Color(0xFFE5E7EB);
+          }),
+          trackOutlineColor: MaterialStateProperty.resolveWith((states) {
+            return states.contains(MaterialState.selected) ? AppConstants.primary : const Color(0xFF9CA3AF);
+          }),
+          thumbIcon: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const Icon(Icons.check, size: 14, color: AppConstants.primary);
+            }
+            return const Icon(Icons.close, size: 12, color: Colors.white);
+          }),
+        ),
         textTheme: GoogleFonts.ibmPlexSansArabicTextTheme(ThemeData.light().textTheme),
       ),
       darkTheme: ThemeData(
@@ -63,6 +80,24 @@ class AdhkarApp extends StatelessWidget {
           onPrimary: Color(0xFF111827),
           onSecondary: Color(0xFF111827),
           onSurface: Color(0xFFF3F4F6),
+        ),
+        switchTheme: SwitchThemeData(
+          thumbColor: MaterialStateProperty.resolveWith((states) {
+            return states.contains(MaterialState.selected) ? const Color(0xFF0E1117) : const Color(0xFF6B7280);
+          }),
+          trackColor: MaterialStateProperty.resolveWith((states) {
+            return states.contains(MaterialState.selected) ? const Color(0xFFF3F4F6) : const Color(0xFF1C2128);
+          }),
+          trackOutlineColor: MaterialStateProperty.resolveWith((states) {
+            return states.contains(MaterialState.selected) ? const Color(0xFFF3F4F6) : const Color(0xFF4B5563);
+          }),
+          trackOutlineWidth: const MaterialStatePropertyAll(1.5),
+          thumbIcon: MaterialStateProperty.resolveWith((states) {
+            if (states.contains(MaterialState.selected)) {
+              return const Icon(Icons.check, size: 14, color: Color(0xFFF3F4F6));
+            }
+            return const Icon(Icons.close, size: 12, color: Color(0xFF1C2128));
+          }),
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: AppConstants.surfaceDark,

@@ -26,6 +26,8 @@ class NotificationService {
   static const String _prefAyyamBeedEnabled = 'notif_ayyam_beed_enabled';
   static const String _prefMorningAdhkarEnabled = 'notif_morning_adhkar_enabled';
   static const String _prefEveningAdhkarEnabled = 'notif_evening_adhkar_enabled';
+  static const String _prefMorningAdhkarOffsetMin = 'notif_morning_adhkar_offset_min';
+  static const String _prefEveningAdhkarOffsetMin = 'notif_evening_adhkar_offset_min';
   static const String _prefFixedPrayerNotif = 'notif_fixed_prayer_enabled';
   static const String _prefEveningHour = 'notif_evening_hour';
   static const String _prefEveningMinute = 'notif_evening_minute';
@@ -46,7 +48,7 @@ class NotificationService {
 
   static const String _adhkarChannelId = 'adhkar_morning_evening_reminders';
   static const String _adhkarChannelName = 'تذكير أذكار الصباح والمساء';
-  static const String _adhkarChannelDesc = 'تنبيهات تلقائية قبل الشروق بنصف ساعة وقبل المغرب بنصف ساعة';
+  static const String _adhkarChannelDesc = 'تنبيهات تلقائية قبل الشروق والمغرب حسب المدة المحددة';
 
   static const String _prayerAzanChannelId = 'adhkar_prayer_azan_v1';
   static const String _prayerTakbeerChannelId = 'adhkar_prayer_takbeer_v1';
@@ -120,6 +122,16 @@ class NotificationService {
   Future<bool> isEveningAdhkarEnabled() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_prefEveningAdhkarEnabled) ?? true;
+  }
+
+  Future<int> getMorningAdhkarOffsetMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getInt(_prefMorningAdhkarOffsetMin) ?? 30).clamp(1, 180);
+  }
+
+  Future<int> getEveningAdhkarOffsetMinutes() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getInt(_prefEveningAdhkarOffsetMin) ?? 30).clamp(1, 180);
   }
 
   Future<bool> isFixedPrayerNotifEnabled() async {
@@ -211,6 +223,8 @@ class NotificationService {
     bool? ayyamBeedEnabled,
     bool? morningAdhkarEnabled,
     bool? eveningAdhkarEnabled,
+    int? morningAdhkarOffsetMin,
+    int? eveningAdhkarOffsetMin,
     int? eveningHour,
     int? eveningMinute,
   }) async {
@@ -219,6 +233,12 @@ class NotificationService {
     if (ayyamBeedEnabled != null) await prefs.setBool(_prefAyyamBeedEnabled, ayyamBeedEnabled);
     if (morningAdhkarEnabled != null) await prefs.setBool(_prefMorningAdhkarEnabled, morningAdhkarEnabled);
     if (eveningAdhkarEnabled != null) await prefs.setBool(_prefEveningAdhkarEnabled, eveningAdhkarEnabled);
+    if (morningAdhkarOffsetMin != null) {
+      await prefs.setInt(_prefMorningAdhkarOffsetMin, morningAdhkarOffsetMin.clamp(1, 180));
+    }
+    if (eveningAdhkarOffsetMin != null) {
+      await prefs.setInt(_prefEveningAdhkarOffsetMin, eveningAdhkarOffsetMin.clamp(1, 180));
+    }
     if (eveningHour != null) await prefs.setInt(_prefEveningHour, eveningHour);
     if (eveningMinute != null) await prefs.setInt(_prefEveningMinute, eveningMinute);
     await scheduleAllReminders();
@@ -315,6 +335,8 @@ class NotificationService {
       final ayyamOn = await isAyyamBeedEnabled();
       final morningAdhkarOn = await isMorningAdhkarEnabled();
       final eveningAdhkarOn = await isEveningAdhkarEnabled();
+      final morningOffset = await getMorningAdhkarOffsetMinutes();
+      final eveningOffset = await getEveningAdhkarOffsetMinutes();
 
       final time = await getEveningReminderTime();
       final evHour = time[0];
@@ -377,16 +399,18 @@ class NotificationService {
         }
       }
 
-      // 2. Schedule Morning (30m before Shuruq) & Evening (30m before Maghrib) Adhkar — HEADER ONLY (no points body)
+      // 2. Schedule Morning (dynamic mins before Shuruq) & Evening (dynamic mins before Maghrib) Adhkar — HEADER ONLY
       if (morningAdhkarOn || eveningAdhkarOn) {
         for (int i = 0; i <= 20; i++) {
           final targetDay = today.add(Duration(days: i));
           final sun = SunTimesCalculator.calculate(targetDay, city.lat, city.lng);
+          final morningTarget = sun.morningReminder(minutesBefore: morningOffset);
+          final eveningTarget = sun.eveningReminder(minutesBefore: eveningOffset);
 
-          if (morningAdhkarOn && sun.morningAdhkarReminder.isAfter(now)) {
+          if (morningAdhkarOn && morningTarget.isAfter(now)) {
             await _scheduleOne(
               id: adhkarNotifId++,
-              scheduledLocal: sun.morningAdhkarReminder,
+              scheduledLocal: morningTarget,
               title: '☀️ أذكار الصباح',
               body: null,
               channelId: _adhkarChannelId,
@@ -396,10 +420,10 @@ class NotificationService {
             );
           }
 
-          if (eveningAdhkarOn && sun.eveningAdhkarReminder.isAfter(now)) {
+          if (eveningAdhkarOn && eveningTarget.isAfter(now)) {
             await _scheduleOne(
               id: adhkarNotifId++,
-              scheduledLocal: sun.eveningAdhkarReminder,
+              scheduledLocal: eveningTarget,
               title: '🌙 أذكار المساء',
               body: null,
               channelId: _adhkarChannelId,
@@ -522,89 +546,5 @@ class NotificationService {
     } catch (e) {
       debugPrint('Failed to schedule notification #$id: $e');
     }
-  }
-
-  Future<void> showTestNotification() async {
-    if (!_initialized) await init();
-    await requestPermissions();
-    final offset = await getHijriOffset();
-    final hijri = HijriCalendar.fromGregorian(DateTime.now(), offsetDays: offset);
-
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        _fastingChannelId,
-        _fastingChannelName,
-        channelDescription: _fastingChannelDesc,
-        importance: Importance.high,
-        priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
-      ),
-      iOS: DarwinNotificationDetails(),
-    );
-
-    await _plugin.show(
-      9999,
-      '🌙 تذكير الصيام والتقويم الهجري مفعل!',
-      'التاريخ اليوم: ${hijri.formattedArabic}',
-      details,
-    );
-  }
-
-  Future<void> showTestAdhkarNotification(String mode) async {
-    if (!_initialized) await init();
-    await requestPermissions();
-    final isMorning = mode == 'morning';
-
-    const details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        _adhkarChannelId,
-        _adhkarChannelName,
-        channelDescription: _adhkarChannelDesc,
-        importance: Importance.high,
-        priority: Priority.high,
-        icon: '@mipmap/ic_launcher',
-      ),
-      iOS: DarwinNotificationDetails(),
-    );
-
-    // Header only — no points body text
-    await _plugin.show(
-      isMorning ? 9991 : 9992,
-      isMorning ? '☀️ أذكار الصباح' : '🌙 أذكار المساء',
-      null,
-      details,
-      payload: 'misbaha:$mode',
-    );
-  }
-
-  Future<void> showTestPrayerNotification() async {
-    if (!_initialized) await init();
-    await requestPermissions();
-    final mode = await getPrayerSoundMode();
-    final city = SunTimesCalculator.getCityByKey(await getSelectedCityKey());
-
-    final details = NotificationDetails(
-      android: AndroidNotificationDetails(
-        _prayerChannelForMode(mode),
-        _prayerChannelName,
-        channelDescription: _prayerChannelDesc,
-        importance: Importance.high,
-        priority: Priority.high,
-        playSound: true,
-        sound: _prayerSoundForMode(mode),
-        icon: '@mipmap/ic_launcher',
-      ),
-      iOS: const DarwinNotificationDetails(),
-    );
-
-    await _plugin.show(
-      9993,
-      '🕌 تجربة إشعار الأذان (${city.nameAr})',
-      mode == 'azan'
-          ? 'صوت أذان الحرم المكي عند دخول وقت الصلاة'
-          : (mode == 'takbeer' ? 'تكبيرة الأذان المختصرة' : 'صوت تنبيهات النظام الافتراضي'),
-      details,
-      payload: 'prayer:dhuhr',
-    );
   }
 }

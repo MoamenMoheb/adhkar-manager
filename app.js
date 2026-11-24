@@ -3645,6 +3645,33 @@ async function renderLeaderboardView() {
   const listContainer = document.getElementById('leaderboardListContainer');
   const podiumContainer = document.getElementById('leaderboardPodium');
   const countText = document.getElementById('leaderboardCountText');
+  const genderBadge = document.getElementById('leaderboardGenderBadge');
+
+  if (genderBadge) {
+    if (!currentLeaderboardScope && user) {
+      const g = profile?.gender || user.user_metadata?.gender || 'male';
+      genderBadge.innerText = g === 'female' ? '🚺 لوحة المتصدرات العامة (النساء فقط)' : '🚹 لوحة المتصدرين العامة (الرجال فقط)';
+      genderBadge.classList.remove('hidden');
+    } else {
+      genderBadge.classList.add('hidden');
+    }
+  }
+
+  if (!currentLeaderboardScope && !user) {
+    if (podiumContainer) podiumContainer.innerHTML = '';
+    if (countText) countText.innerText = 'يتطلب تسجيل الدخول';
+    if (listContainer) {
+      listContainer.innerHTML = `
+        <div class="p-8 text-center space-y-3">
+          <div class="text-xs font-bold text-on-surface">سجل دخولك لعرض لوحة الترتيب العام الخاصة بفئتك</div>
+          <button onclick="openAuthModal('signin')" class="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all cursor-pointer">
+            تسجيل الدخول / إنشاء حساب
+          </button>
+        </div>
+      `;
+    }
+    return;
+  }
 
   if (listContainer) {
     listContainer.innerHTML = `
@@ -3955,6 +3982,7 @@ async function handleAuthSubmit(e) {
   const email = (document.getElementById('authEmailInput')?.value || '').trim();
   const password = (document.getElementById('authPasswordInput')?.value || '').trim();
   const name = (document.getElementById('authNameInput')?.value || '').trim();
+  const gender = document.getElementById('authGenderInput')?.value || 'male';
   const errBox = document.getElementById('authErrorBox');
 
   if (errBox) errBox.classList.add('hidden');
@@ -3962,7 +3990,7 @@ async function handleAuthSubmit(e) {
   try {
     if (currentAuthTab === 'signup') {
       if (!name) throw new Error('يرجى إدخال اسمك المعروض للأصدقاء');
-      const data = await supabaseService.signUp(email, password, name);
+      const data = await supabaseService.signUp(email, password, name, gender);
       if (!data.session) {
         showToast('تم إرسال رابط تأكيد إلى بريدك الإلكتروني! يرجى تأكيده ثم تسجيل الدخول ✉️', 'info');
         switchAuthTab('signin');
@@ -4379,14 +4407,38 @@ function renderWebSunTimesUI() {
     boxEl.innerHTML = `
       <div class="flex items-center justify-between">
         <span>☀️ الشروق اليوم: <strong>${sun.sunriseStr}</strong></span>
-        <span class="text-amber-700 dark:text-amber-300 font-bold">التنبيه: ${sun.morningReminderStr}</span>
+        <span class="text-amber-700 dark:text-amber-300 font-bold">التنبيه (${sun.morningOffset} د): ${sun.morningReminderStr}</span>
       </div>
       <div class="flex items-center justify-between">
         <span>🌙 المغرب اليوم: <strong>${sun.sunsetStr}</strong></span>
-        <span class="text-primary font-bold">التنبيه: ${sun.eveningReminderStr}</span>
+        <span class="text-primary font-bold">التنبيه (${sun.eveningOffset} د): ${sun.eveningReminderStr}</span>
       </div>
     `;
   }
+
+  const mInput = document.getElementById('webMorningOffsetInput');
+  if (mInput) mInput.value = SunTimesHelper.getMorningOffset();
+  const eInput = document.getElementById('webEveningOffsetInput');
+  if (eInput) eInput.value = SunTimesHelper.getEveningOffset();
+  const descEl = document.getElementById('webAdhkarOffsetDesc');
+  if (descEl) {
+    descEl.innerText = `الصباح قبل الشروق بـ ${SunTimesHelper.getMorningOffset()} دقيقة • المساء قبل المغرب بـ ${SunTimesHelper.getEveningOffset()} دقيقة — يفتح المسبحة مباشرة مع الأذكار`;
+  }
+}
+
+function handleWebAdhkarOffsetChange(period, minutes) {
+  if (typeof SunTimesHelper === 'undefined') return;
+  const val = period === 'morning'
+    ? SunTimesHelper.setMorningOffset(minutes)
+    : SunTimesHelper.setEveningOffset(minutes);
+  renderWebSunTimesUI();
+  scheduleWebAdhkarTimers();
+  showToast(
+    period === 'morning'
+      ? `تم ضبط أذكار الصباح قبل الشروق بـ ${val} دقيقة`
+      : `تم ضبط أذكار المساء قبل المغرب بـ ${val} دقيقة`,
+    'verified'
+  );
 }
 
 function handleWebCityChange(cityKey) {
@@ -4440,7 +4492,12 @@ function scheduleWebAdhkarTimers() {
 
 function fireWebAdhkarNotification(mode) {
   const isMorning = mode === 'morning';
-  const title = isMorning ? '☀️ أذكار الصباح (قبل الشروق بنصف ساعة)' : '🌙 أذكار المساء (قبل المغرب بنصف ساعة)';
+  const offset = typeof SunTimesHelper !== 'undefined'
+    ? (isMorning ? SunTimesHelper.getMorningOffset() : SunTimesHelper.getEveningOffset())
+    : 30;
+  const title = isMorning
+    ? `☀️ أذكار الصباح (قبل الشروق بـ ${offset} دقيقة)`
+    : `🌙 أذكار المساء (قبل المغرب بـ ${offset} دقيقة)`;
   const body = isMorning
     ? 'اضغط لفتح المسبحة مع أذكار الصباح • تُحتسب تلقائياً (+١٥ نقطة) عند الإتمام'
     : 'اضغط لفتح المسبحة مع أذكار المساء • تُحتسب تلقائياً (+١٥ نقطة) عند الإتمام';
@@ -4458,24 +4515,6 @@ function fireWebAdhkarNotification(mode) {
       notif.close();
     };
   }
-}
-
-async function testWebAdhkarNotif(mode) {
-  if (!('Notification' in window)) {
-    openMisbahaFromNotification(mode);
-    showToast('تم فتح المسبحة على الأذكار المطلوبة (متصفحك لا يدعم إشعارات النظام)', 'info');
-    return;
-  }
-  if (Notification.permission !== 'granted') {
-    const perm = await Notification.requestPermission();
-    if (perm !== 'granted') {
-      showToast('يرجى السماح بالإشعارات من المتصفح أو تجربة التطبيق على الهاتف', 'info');
-      return;
-    }
-    localStorage.setItem('adhkar_web_fasting_notifs', '1');
-    updateWebNotifStatusUI();
-  }
-  fireWebAdhkarNotification(mode);
 }
 
 function updateWebNotifStatusUI() {
@@ -4505,23 +4544,10 @@ async function enableWebFastingNotifs() {
     localStorage.setItem('adhkar_web_fasting_notifs', '1');
     showToast('تم تفعيل تنبيهات صيام الإثنين والخميس والأيام البيض! 🔔', 'verified');
     updateWebNotifStatusUI();
-    testWebFastingNotif();
   } else {
     showToast('يرجى السماح بالإشعارات من إعدادات المتصفح', 'info');
     updateWebNotifStatusUI();
   }
-}
-
-function testWebFastingNotif() {
-  if (!('Notification' in window) || Notification.permission !== 'granted') {
-    enableWebFastingNotifs();
-    return;
-  }
-  const todayHijri = HijriCalendarHelper.fromGregorian(new Date());
-  new Notification('🌙 تذكير الصيام - أذكار', {
-    body: `التاريخ اليوم: ${todayHijri.formattedArabic}. سيتم تذكيرك بصيام الإثنين والخميس والأيام البيض (١٣، ١٤، ١٥).`,
-    icon: 'assets/icons/app_icon_512.png'
-  });
 }
 
 function checkAndFireWebFastingReminder() {
@@ -4799,14 +4825,5 @@ function fireWebPrayerNotification(entry) {
       n.close();
     };
   }
-}
-
-async function testWebPrayerNotification() {
-  if ('Notification' in window && Notification.permission !== 'granted') {
-    await Notification.requestPermission();
-  }
-  const now = new Date();
-  const next = PrayerTimesHelper.getNextPrayer(now);
-  fireWebPrayerNotification(next);
 }
 

@@ -21,6 +21,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final SupabaseService _service = SupabaseService.instance;
   String _appVersion = '...';
   bool _checkingUpdate = false;
+  bool _savingPrivacy = false;
+
+  Future<void> _setPrivacy(String level) async {
+    if (_savingPrivacy) return;
+    setState(() => _savingPrivacy = true);
+    try {
+      await _service.updatePrivacyLevel(level);
+      if (!mounted) return;
+      final label = level == 'public'
+          ? 'عام (للجميع)'
+          : (level == 'friends' ? 'أصدقائي فقط' : 'خاص (مخفي)');
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('تم تحديث خصوصية النقاط إلى: $label')),
+        );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('تعذر تحديث الخصوصية: $e')),
+        );
+    } finally {
+      if (mounted) setState(() => _savingPrivacy = false);
+    }
+  }
 
   @override
   void initState() {
@@ -283,65 +310,110 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
 
           // PRIVACY SETTING CARD (Public vs Friends vs Private)
-          Card(
-            color: AppConstants.cardSurface(context),
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: AppConstants.borderColor(context)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('خصوصية إنجازك في لوحة المتصدرين:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.textPrimary(context))),
-                  const SizedBox(height: 12),
-                  Row(
+          Builder(
+            builder: (context) {
+              final currentPrivacy = profile?.privacyLevel ?? 'public';
+              final primaryTxt = AppConstants.textPrimary(context);
+              final secondaryTxt = AppConstants.textSecondary(context);
+              final isDark = AppConstants.isDark(context);
+
+              final String privacyDesc = currentPrivacy == 'public'
+                  ? '🌍 عام: نقاطك وترتيبك يظهران للجميع في لوحة الصدارة العامة (ضمن نفس الجنس) وللأصدقاء.'
+                  : (currentPrivacy == 'friends'
+                      ? '👥 أصدقائي: نقاطك وترتيبك يظهران لأصدقائك المقبولين فقط ولا يظهران في الترتيب العام.'
+                      : '🔒 خاص: نقاطك وترتيبك مخفيان تماماً عن الجميع ولن يظهرا في أي لوحة صدارة.');
+
+              Widget buildPrivacyOption(String level, String label, IconData icon) {
+                final selected = currentPrivacy == level;
+                final activeBg = isDark ? const Color(0xFFF3F4F6) : AppConstants.primary;
+                final activeFg = isDark ? const Color(0xFF0E1117) : Colors.white;
+                return Expanded(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: _savingPrivacy ? null : () => _setPrivacy(level),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: selected ? activeBg : AppConstants.activeSurface(context),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: selected ? activeBg : AppConstants.borderColor(context),
+                          width: selected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(icon, size: 15, color: selected ? activeFg : secondaryTxt),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              label,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: selected ? FontWeight.bold : FontWeight.w500,
+                                color: selected ? activeFg : secondaryTxt,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return Card(
+                color: AppConstants.cardSurface(context),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: AppConstants.borderColor(context)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: ChoiceChip(
-                          label: Center(child: Text('🌍 عام', style: TextStyle(color: profile?.privacyLevel == 'public' ? Colors.white : AppConstants.textSecondary(context)))),
-                          selected: profile?.privacyLevel == 'public',
-                          selectedColor: AppConstants.accentBg(context),
-                          backgroundColor: AppConstants.activeSurface(context),
-                          onSelected: (_) async {
-                            await _service.updatePrivacyLevel('public');
-                            setState(() {});
-                          },
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('خصوصية إنجازك في لوحة المتصدرين:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt)),
+                          if (_savingPrivacy)
+                            const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: Center(child: Text('👥 أصدقائي', style: TextStyle(color: profile?.privacyLevel == 'friends' ? Colors.white : AppConstants.textSecondary(context)))),
-                          selected: profile?.privacyLevel == 'friends',
-                          selectedColor: AppConstants.accentBg(context),
-                          backgroundColor: AppConstants.activeSurface(context),
-                          onSelected: (_) async {
-                            await _service.updatePrivacyLevel('friends');
-                            setState(() {});
-                          },
-                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          buildPrivacyOption('public', 'عام', Icons.public),
+                          const SizedBox(width: 6),
+                          buildPrivacyOption('friends', 'أصدقائي', Icons.group),
+                          const SizedBox(width: 6),
+                          buildPrivacyOption('private', 'خاص', Icons.lock),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: Center(child: Text('🔒 خاص', style: TextStyle(color: profile?.privacyLevel == 'private' ? Colors.white : AppConstants.textSecondary(context)))),
-                          selected: profile?.privacyLevel == 'private',
-                          selectedColor: AppConstants.accentBg(context),
-                          backgroundColor: AppConstants.activeSurface(context),
-                          onSelected: (_) async {
-                            await _service.updatePrivacyLevel('private');
-                            setState(() {});
-                          },
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: AppConstants.activeSurface(context),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppConstants.borderColor(context)),
+                        ),
+                        child: Text(
+                          privacyDesc,
+                          style: TextStyle(fontSize: 11, color: primaryTxt, height: 1.4),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
 
           const SizedBox(height: 16),

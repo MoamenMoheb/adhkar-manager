@@ -1120,6 +1120,10 @@
         </div>
       </div>
 
+      <!-- Gender Lock Banner (Global Leaderboard) -->
+      <div id="leaderboardGenderBadge" class="hidden bg-surface-container-low border border-surface-container-high rounded-xl px-4 py-2 text-center text-xs font-bold text-primary">
+      </div>
+
       <!-- Podium Top 3 Display -->
       <div id="leaderboardPodium" class="grid grid-cols-3 gap-2 sm:gap-4 items-end pt-4 pb-2">
         <!-- Rendered dynamically via JS: 2nd, 1st, 3rd -->
@@ -1208,14 +1212,11 @@
             <button onclick="enableWebFastingNotifs()" class="px-4 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all cursor-pointer">
               تفعيل التنبيهات
             </button>
-            <button onclick="testWebFastingNotif()" class="px-3 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-all cursor-pointer">
-              تجربة التنبيه
-            </button>
           </div>
         </div>
       </div>
 
-      <!-- Morning & Evening Adhkar Notification Settings Card (Shuruq & Maghrib - 30m) -->
+      <!-- Morning & Evening Adhkar Notification Settings Card (Dynamic Offset before Shuruq & Maghrib) -->
       <div class="bg-surface-container-lowest rounded-2xl p-5 shadow-sm border border-surface-container-high/60 space-y-4">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
@@ -1223,7 +1224,7 @@
           </div>
           <div>
             <h3 class="font-headline font-bold text-sm sm:text-base text-on-surface">تنبيهات أذكار الصباح والمساء (الشروق والمغرب)</h3>
-            <p class="text-[11px] text-on-surface-variant">تنبيه قبل الشروق بـ ٣٠ دقيقة وقبل المغرب بـ ٣٠ دقيقة — يفتح المسبحة مباشرة مع الأذكار</p>
+            <p id="webAdhkarOffsetDesc" class="text-[11px] text-on-surface-variant">تنبيه قبل الشروق بـ ٣٠ دقيقة وقبل المغرب بـ ٣٠ دقيقة — يفتح المسبحة مباشرة مع الأذكار</p>
           </div>
         </div>
 
@@ -1239,13 +1240,25 @@
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2 pt-1">
-          <button onclick="testWebAdhkarNotif('morning')" class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 text-xs font-bold transition-all cursor-pointer">
-            ☀️ تجربة إشعار الصباح (يفتح المسبحة)
-          </button>
-          <button onclick="testWebAdhkarNotif('evening')" class="px-3.5 py-2 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition-all cursor-pointer">
-            🌙 تجربة إشعار المساء (يفتح المسبحة)
-          </button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-surface-container">
+          <div class="space-y-1">
+            <label for="webMorningOffsetInput" class="text-xs font-bold text-on-surface">أذكار الصباح قبل الشروق (بالدقائق):</label>
+            <div class="flex items-center gap-1.5">
+              <input id="webMorningOffsetInput" type="number" min="1" max="180" value="30" onchange="handleWebAdhkarOffsetChange('morning', this.value)" class="w-20 bg-surface-container-low text-on-surface px-2.5 py-1.5 rounded-xl text-xs font-bold border border-surface-container-high text-center"/>
+              <button type="button" onclick="handleWebAdhkarOffsetChange('morning', 20)" class="px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-[11px] font-semibold cursor-pointer">٢٠ د</button>
+              <button type="button" onclick="handleWebAdhkarOffsetChange('morning', 30)" class="px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-[11px] font-semibold cursor-pointer">٣٠ د</button>
+              <button type="button" onclick="handleWebAdhkarOffsetChange('morning', 60)" class="px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-[11px] font-semibold cursor-pointer">ساعة</button>
+            </div>
+          </div>
+          <div class="space-y-1">
+            <label for="webEveningOffsetInput" class="text-xs font-bold text-on-surface">أذكار المساء قبل المغرب (بالدقائق):</label>
+            <div class="flex items-center gap-1.5">
+              <input id="webEveningOffsetInput" type="number" min="1" max="180" value="30" onchange="handleWebAdhkarOffsetChange('evening', this.value)" class="w-20 bg-surface-container-low text-on-surface px-2.5 py-1.5 rounded-xl text-xs font-bold border border-surface-container-high text-center"/>
+              <button type="button" onclick="handleWebAdhkarOffsetChange('evening', 20)" class="px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-[11px] font-semibold cursor-pointer">٢٠ د</button>
+              <button type="button" onclick="handleWebAdhkarOffsetChange('evening', 30)" class="px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-[11px] font-semibold cursor-pointer">٣٠ د</button>
+              <button type="button" onclick="handleWebAdhkarOffsetChange('evening', 60)" class="px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-[11px] font-semibold cursor-pointer">ساعة</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1301,9 +1314,6 @@
           <div class="flex flex-wrap items-center gap-2">
             <button onclick="toggleWebAzanAudio()" id="webAzanPreviewBtn" class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 dark:text-amber-300 text-xs font-bold transition-all cursor-pointer">
               🕌 تشغيل / إيقاف الأذان
-            </button>
-            <button onclick="testWebPrayerNotification()" class="px-3.5 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all cursor-pointer">
-              🔔 تجربة إشعار الصلاة
             </button>
           </div>
         </div>
@@ -1557,10 +1567,19 @@
 
       <!-- Auth Form -->
       <form onsubmit="handleAuthSubmit(event)" class="space-y-3.5">
-        <!-- Display Name (for sign up only) -->
-        <div class="space-y-1 hidden" id="authNameField">
-          <label class="text-xs font-semibold text-on-surface">الاسم المعروض (الذي يراه أصدقاؤك):</label>
-          <input id="authNameInput" type="text" placeholder="مثال: مؤمن مهيب" class="w-full bg-surface-container-low text-on-surface px-3.5 py-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+        <!-- Display Name & Gender (for sign up only) -->
+        <div class="space-y-3 hidden" id="authNameField">
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-on-surface">الاسم المعروض (الذي يراه أصدقاؤك):</label>
+            <input id="authNameInput" type="text" placeholder="مثال: مؤمن مهيب" class="w-full bg-surface-container-low text-on-surface px-3.5 py-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+          <div class="space-y-1">
+            <label class="text-xs font-semibold text-on-surface">الجنس (لتخصيص لوحة المتصدرين العامة):</label>
+            <select id="authGenderInput" class="w-full bg-surface-container-low text-on-surface px-3.5 py-2.5 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer">
+              <option value="male">🚹 ذكر (لوحة الرجال)</option>
+              <option value="female">🚺 أنثى (لوحة النساء)</option>
+            </select>
+          </div>
         </div>
 
         <!-- Email -->

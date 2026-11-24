@@ -332,7 +332,6 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                     title: Text('إشعار دائم للصلاة القادمة في الشريط', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: primaryTxt)),
                     subtitle: Text('يعرض اسم الصلاة ووقتها والعد التنازلي المتبقي', style: TextStyle(fontSize: 11, color: secondaryTxt)),
                     value: _fixedNotifEnabled,
-                    activeColor: AppConstants.accentBg(context),
                     onChanged: (val) async {
                       await _notif.requestPermissions();
                       await _notif.setFixedPrayerNotifEnabled(val);
@@ -385,34 +384,19 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   ),
 
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.play_arrow, size: 18),
-                          label: const Text('معاينة الصوت', style: TextStyle(fontSize: 12)),
-                          onPressed: () {
-                            if (_soundMode == 'takbeer') {
-                              _audio.playAzan(shortTakbeer: true);
-                            } else {
-                              _audio.playAzan(shortTakbeer: false);
-                            }
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppConstants.accentBg(context),
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: const Icon(Icons.notifications_active, size: 18),
-                          label: const Text('تجربة إشعار الأذان', style: TextStyle(fontSize: 12)),
-                          onPressed: () => _notif.showTestPrayerNotification(),
-                        ),
-                      ),
-                    ],
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.play_arrow, size: 18),
+                      label: const Text('معاينة الصوت', style: TextStyle(fontSize: 12)),
+                      onPressed: () {
+                        if (_soundMode == 'takbeer') {
+                          _audio.playAzan(shortTakbeer: true);
+                        } else {
+                          _audio.playAzan(shortTakbeer: false);
+                        }
+                      },
+                    ),
                   ),
 
                   const Divider(height: 28),
@@ -458,7 +442,6 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                     title: Text('المذهب الحنفي لصلاة العصر', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
                     subtitle: Text('افتراضي: مذهب الجمهور (الشافعي والمالكي والحنبلي)', style: TextStyle(fontSize: 11, color: secondaryTxt)),
                     value: _hanafiAsr,
-                    activeColor: AppConstants.accentBg(context),
                     onChanged: (val) async {
                       await _notif.setHanafiAsr(val);
                       setState(() => _hanafiAsr = val);

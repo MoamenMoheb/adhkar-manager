@@ -5,6 +5,7 @@ import '../core/constants/constants.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
 import 'friends_screen.dart';
+import 'auth_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -16,16 +17,20 @@ class LeaderboardScreen extends StatefulWidget {
 class _LeaderboardScreenState extends State<LeaderboardScreen> {
   final SupabaseService _service = SupabaseService.instance;
   bool _onlyFriends = false;
-  String _selectedGender = 'male'; // 'male' or 'female'
   String _timeframe = 'today'; // 'today', 'week', 'month', 'all'
   List<LeaderboardEntry> _entries = [];
   List<Map<String, dynamic>> _pendingRequests = [];
   bool _loading = true;
 
+  String get _userGender {
+    return _service.currentProfile?.gender ??
+        _service.currentUser?.userMetadata?['gender']?.toString() ??
+        'male';
+  }
+
   @override
   void initState() {
     super.initState();
-    _selectedGender = _service.currentProfile?.gender ?? 'male';
     _service.addListener(_onServiceChanged);
     _loadLeaderboard();
   }
@@ -42,10 +47,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Future<void> _loadLeaderboard() async {
     setState(() => _loading = true);
+    if (_service.currentUser == null) {
+      if (!mounted) return;
+      setState(() {
+        _entries = [];
+        _pendingRequests = [];
+        _loading = false;
+      });
+      return;
+    }
     final data = await _service.fetchLeaderboard(
       timeframe: _timeframe,
       onlyFriends: _onlyFriends,
-      gender: _selectedGender,
+      gender: _userGender,
     );
     final reqs = await _service.fetchFriendRequests();
     if (!mounted) return;
@@ -163,66 +177,34 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             ),
           ),
 
-          if (!_onlyFriends) ...[
+          if (!_onlyFriends && _service.currentUser != null) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
-                padding: const EdgeInsets.all(4),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppConstants.cardSurface(context),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppConstants.borderColor(context)),
                 ),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          setState(() => _selectedGender = 'male');
-                          _loadLeaderboard();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: _selectedGender == 'male' ? selectedBg : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '🚹 المتصدرون (رجال)',
-                              style: TextStyle(
-                                color: _selectedGender == 'male' ? Colors.white : secondaryTxt,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                    Icon(
+                      _userGender == 'female' ? Icons.woman : Icons.man,
+                      size: 18,
+                      color: primaryTxt,
                     ),
-                    Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          setState(() => _selectedGender = 'female');
-                          _loadLeaderboard();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: _selectedGender == 'female' ? selectedBg : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '🚺 المتصدرات (نساء)',
-                              style: TextStyle(
-                                color: _selectedGender == 'female' ? Colors.white : secondaryTxt,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ),
+                    const SizedBox(width: 6),
+                    Text(
+                      _userGender == 'female'
+                          ? 'لوحة المتصدرات (النساء فقط)'
+                          : 'لوحة المتصدرين (الرجال فقط)',
+                      style: TextStyle(
+                        color: primaryTxt,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -236,7 +218,33 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
-                : _entries.isEmpty
+                : _service.currentUser == null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.lock_outline, size: 52, color: secondaryTxt),
+                              const SizedBox(height: 12),
+                              Text(
+                                'سجل دخولك للمنافسة وعرض لوحة الترتيب العام الخاصة بفئتك',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: primaryTxt, fontWeight: FontWeight.bold, fontSize: 14),
+                              ),
+                              const SizedBox(height: 14),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthScreen()))
+                                      .then((_) => _loadLeaderboard());
+                                },
+                                child: const Text('تسجيل الدخول / إنشاء حساب'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    : _entries.isEmpty
                     ? Center(
                         child: Text(
                           _onlyFriends ? 'لم تضف أصدقاء بعد للتنافس معهم' : 'لا يوجد متنافسون في هذه القائمة',

@@ -24,6 +24,8 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
   bool _ayyamBeedEnabled = true;
   bool _morningAdhkarEnabled = true;
   bool _eveningAdhkarEnabled = true;
+  int _morningOffsetMin = 30;
+  int _eveningOffsetMin = 30;
   String _cityKey = SunTimesCalculator.defaultCityForLocalTimezone().key;
   TimeOfDay _eveningTime = const TimeOfDay(hour: 20, minute: 30);
   bool _loadingPrefs = true;
@@ -44,6 +46,8 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
     final ayyam = await _notifService.isAyyamBeedEnabled();
     final morningAdhkar = await _notifService.isMorningAdhkarEnabled();
     final eveningAdhkar = await _notifService.isEveningAdhkarEnabled();
+    final morningOff = await _notifService.getMorningAdhkarOffsetMinutes();
+    final eveningOff = await _notifService.getEveningAdhkarOffsetMinutes();
     final cityKey = await _notifService.getSelectedCityKey();
     final evTime = await _notifService.getEveningReminderTime();
 
@@ -55,6 +59,8 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
       _ayyamBeedEnabled = ayyam;
       _morningAdhkarEnabled = morningAdhkar;
       _eveningAdhkarEnabled = eveningAdhkar;
+      _morningOffsetMin = morningOff;
+      _eveningOffsetMin = eveningOff;
       _cityKey = cityKey;
       _eveningTime = TimeOfDay(hour: evTime[0], minute: evTime[1]);
       _viewYear = todayHijri.year;
@@ -62,6 +68,72 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
       _selectedDay = todayHijri;
       _loadingPrefs = false;
     });
+  }
+
+  Future<void> _updateAdhkarOffset({required bool isMorning, required int minutes}) async {
+    final clamped = minutes.clamp(1, 180);
+    await _notifService.requestPermissions();
+    if (isMorning) {
+      await _notifService.updateSettings(morningAdhkarOffsetMin: clamped);
+      if (mounted) setState(() => _morningOffsetMin = clamped);
+    } else {
+      await _notifService.updateSettings(eveningAdhkarOffsetMin: clamped);
+      if (mounted) setState(() => _eveningOffsetMin = clamped);
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            isMorning
+                ? 'تم ضبط أذكار الصباح قبل الشروق بـ $clamped دقيقة'
+                : 'تم ضبط أذكار المساء قبل المغرب بـ $clamped دقيقة',
+          ),
+        ),
+      );
+  }
+
+  Future<void> _showCustomOffsetDialog({required bool isMorning}) async {
+    final controller = TextEditingController(
+      text: (isMorning ? _morningOffsetMin : _eveningOffsetMin).toString(),
+    );
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          isMorning ? 'توقيت أذكار الصباح' : 'توقيت أذكار المساء',
+          style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          autofocus: true,
+          decoration: InputDecoration(
+            labelText: isMorning ? 'عدد الدقائق قبل الشروق' : 'عدد الدقائق قبل المغرب',
+            hintText: 'مثال: ٢٠ أو ٣٠ أو ٦٠',
+            suffixText: 'دقيقة',
+            border: const OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+          ElevatedButton(
+            onPressed: () {
+              final parsed = int.tryParse(controller.text.trim());
+              if (parsed == null || parsed < 1 || parsed > 180) {
+                return;
+              }
+              Navigator.pop(ctx, parsed);
+            },
+            child: const Text('حفظ'),
+          ),
+        ],
+      ),
+    );
+    if (result != null) {
+      await _updateAdhkarOffset(isMorning: isMorning, minutes: result);
+    }
   }
 
   void _prevMonth() {
@@ -445,7 +517,6 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
                       contentPadding: EdgeInsets.zero,
                       title: Text('صيام الإثنين والخميس', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryTxt)),
                       value: _monThuEnabled,
-                      activeColor: selectedBg,
                       onChanged: (val) async {
                         await _notifService.requestPermissions();
                         await _notifService.updateSettings(monThuEnabled: val);
@@ -456,7 +527,6 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
                       contentPadding: EdgeInsets.zero,
                       title: Text('صيام الأيام البيض (١٣، ١٤، ١٥ هـ)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryTxt)),
                       value: _ayyamBeedEnabled,
-                      activeColor: selectedBg,
                       onChanged: (val) async {
                         await _notifService.requestPermissions();
                         await _notifService.updateSettings(ayyamBeedEnabled: val);
@@ -486,15 +556,6 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
                         }
                       },
                     ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        icon: const Icon(Icons.notifications_none),
-                        label: const Text('تجربة إشعار الصيام'),
-                        onPressed: () => _notifService.showTestNotification(),
-                      ),
-                    ),
                   ],
                 ],
               ),
@@ -508,6 +569,8 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
             builder: (context) {
               final city = SunTimesCalculator.getCityByKey(_cityKey);
               final sun = SunTimesCalculator.calculate(today, city.lat, city.lng);
+              final morningRem = sun.morningReminder(minutesBefore: _morningOffsetMin);
+              final eveningRem = sun.eveningReminder(minutesBefore: _eveningOffsetMin);
               String fmtTime(DateTime dt) => '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
               return Card(
@@ -524,7 +587,10 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
                     children: [
                       Text('تنبيهات أذكار الصباح والمساء', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: primaryTxt)),
                       const SizedBox(height: 4),
-                      Text('قبل الشروق بـ ٣٠ دقيقة وقبل المغرب بـ ٣٠ دقيقة', style: TextStyle(fontSize: 11, color: secondaryTxt)),
+                      Text(
+                        'الصباح قبل الشروق بـ $_morningOffsetMin دقيقة • المساء قبل المغرب بـ $_eveningOffsetMin دقيقة',
+                        style: TextStyle(fontSize: 11, color: secondaryTxt),
+                      ),
                       const Divider(height: 22),
                       DropdownButtonFormField<String>(
                         value: city.key,
@@ -557,7 +623,7 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('الشروق اليوم: ${fmtTime(sun.sunrise)}', style: TextStyle(fontSize: 12, color: secondaryTxt)),
-                                Text('التنبيه: ${fmtTime(sun.morningAdhkarReminder)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt)),
+                                Text('التنبيه: ${fmtTime(morningRem)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt)),
                               ],
                             ),
                             const SizedBox(height: 6),
@@ -565,7 +631,7 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text('المغرب اليوم: ${fmtTime(sun.sunset)}', style: TextStyle(fontSize: 12, color: secondaryTxt)),
-                                Text('التنبيه: ${fmtTime(sun.eveningAdhkarReminder)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt)),
+                                Text('التنبيه: ${fmtTime(eveningRem)}', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt)),
                               ],
                             ),
                           ],
@@ -575,48 +641,90 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text('أذكار الصباح', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt)),
+                        subtitle: Text('التنبيه قبل الشروق بـ $_morningOffsetMin دقيقة', style: TextStyle(fontSize: 11, color: secondaryTxt)),
                         value: _morningAdhkarEnabled,
-                        activeColor: selectedBg,
                         onChanged: (val) async {
                           await _notifService.requestPermissions();
                           await _notifService.updateSettings(morningAdhkarEnabled: val);
                           setState(() => _morningAdhkarEnabled = val);
                         },
                       ),
+                      _buildOffsetSelector(isMorning: true, currentMinutes: _morningOffsetMin, primaryTxt: primaryTxt, secondaryTxt: secondaryTxt),
+                      const Divider(height: 20),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text('أذكار المساء', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt)),
+                        subtitle: Text('التنبيه قبل المغرب بـ $_eveningOffsetMin دقيقة', style: TextStyle(fontSize: 11, color: secondaryTxt)),
                         value: _eveningAdhkarEnabled,
-                        activeColor: selectedBg,
                         onChanged: (val) async {
                           await _notifService.requestPermissions();
                           await _notifService.updateSettings(eveningAdhkarEnabled: val);
                           setState(() => _eveningAdhkarEnabled = val);
                         },
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => _notifService.showTestAdhkarNotification('morning'),
-                              child: const Text('تجربة إشعار الصباح', style: TextStyle(fontSize: 11)),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => _notifService.showTestAdhkarNotification('evening'),
-                              child: const Text('تجربة إشعار المساء', style: TextStyle(fontSize: 11)),
-                            ),
-                          ),
-                        ],
-                      ),
+                      _buildOffsetSelector(isMorning: false, currentMinutes: _eveningOffsetMin, primaryTxt: primaryTxt, secondaryTxt: secondaryTxt),
                     ],
                   ),
                 ),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOffsetSelector({
+    required bool isMorning,
+    required int currentMinutes,
+    required Color primaryTxt,
+    required Color secondaryTxt,
+  }) {
+    final isDark = AppConstants.isDark(context);
+    final activeBg = isDark ? const Color(0xFFF3F4F6) : AppConstants.primary;
+    final activeFg = isDark ? const Color(0xFF0E1117) : Colors.white;
+    const presets = [15, 20, 30, 60];
+    final isCustom = !presets.contains(currentMinutes);
+
+    Widget buildPill(String label, bool active, VoidCallback onTap) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? activeBg : AppConstants.activeSurface(context),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: active ? activeBg : AppConstants.borderColor(context),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: active ? FontWeight.bold : FontWeight.w500,
+              color: active ? activeFg : secondaryTxt,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          buildPill('١٥ د', currentMinutes == 15, () => _updateAdhkarOffset(isMorning: isMorning, minutes: 15)),
+          buildPill('٢٠ د', currentMinutes == 20, () => _updateAdhkarOffset(isMorning: isMorning, minutes: 20)),
+          buildPill('٣٠ د', currentMinutes == 30, () => _updateAdhkarOffset(isMorning: isMorning, minutes: 30)),
+          buildPill('ساعة (٦٠ د)', currentMinutes == 60, () => _updateAdhkarOffset(isMorning: isMorning, minutes: 60)),
+          buildPill(
+            isCustom ? '$currentMinutes د ✎' : 'تخصيص ✎',
+            isCustom,
+            () => _showCustomOffsetDialog(isMorning: isMorning),
           ),
         ],
       ),

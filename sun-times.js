@@ -71,10 +71,44 @@ class SunTimesHelper {
     return this.getSelectedCity();
   }
 
+  static getMorningOffset() {
+    try {
+      const val = parseInt(localStorage.getItem('adhkar_morning_offset_min') || '30', 10);
+      if (!isNaN(val) && val >= 1 && val <= 180) return val;
+    } catch (e) {}
+    return 30;
+  }
+
+  static setMorningOffset(minutes) {
+    const val = Math.max(1, Math.min(180, parseInt(minutes, 10) || 30));
+    try {
+      localStorage.setItem('adhkar_morning_offset_min', String(val));
+    } catch (e) {}
+    return val;
+  }
+
+  static getEveningOffset() {
+    try {
+      const val = parseInt(localStorage.getItem('adhkar_evening_offset_min') || '30', 10);
+      if (!isNaN(val) && val >= 1 && val <= 180) return val;
+    } catch (e) {}
+    return 30;
+  }
+
+  static setEveningOffset(minutes) {
+    const val = Math.max(1, Math.min(180, parseInt(minutes, 10) || 30));
+    try {
+      localStorage.setItem('adhkar_evening_offset_min', String(val));
+    } catch (e) {}
+    return val;
+  }
+
   static calculate(date = new Date(), lat = null, lng = null) {
     const city = this.getSelectedCity();
     const useLat = lat !== null ? lat : city.lat;
     const useLng = lng !== null ? lng : city.lng;
+    const morningOffset = this.getMorningOffset();
+    const eveningOffset = this.getEveningOffset();
 
     const rad = Math.PI / 180;
     const deg = 180 / Math.PI;
@@ -109,13 +143,15 @@ class SunTimesHelper {
     const utcMidnight = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
     const sunrise = new Date(utcMidnight + sunriseUtcMin * 60000);
     const sunset = new Date(utcMidnight + sunsetUtcMin * 60000);
-    const morningReminder = new Date(sunrise.getTime() - 30 * 60000);
-    const eveningReminder = new Date(sunset.getTime() - 30 * 60000);
+    const morningReminder = new Date(sunrise.getTime() - morningOffset * 60000);
+    const eveningReminder = new Date(sunset.getTime() - eveningOffset * 60000);
 
     return {
       city,
       sunrise,
       sunset,
+      morningOffset,
+      eveningOffset,
       morningReminder,
       eveningReminder,
       sunriseStr: this.formatTimeAr(sunrise),
