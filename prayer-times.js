@@ -50,47 +50,23 @@ class PrayerTimesHelper {
 
     const rad = Math.PI / 180;
     const deg = 180 / Math.PI;
-    const startOfYear = new Date(date.getFullYear(), 0, 1);
-    const dayOfYear = Math.floor((date - startOfYear) / 86400000) + 1;
-    const gamma = (2 * Math.PI / 365) * (dayOfYear - 1);
+    const jd0 = SunTimesHelper.julianDayUtc(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    const approxNoonH = 12 - city.lng / 15;
 
-    const eqTime = 229.18 * (
-      0.000075 +
-      0.001868 * Math.cos(gamma) -
-      0.032077 * Math.sin(gamma) -
-      0.014615 * Math.cos(2 * gamma) -
-      0.040849 * Math.sin(2 * gamma)
-    );
+    const fajrMin = SunTimesHelper.eventUtcMinutes(jd0, city.lat, city.lng, approxNoonH - 6.0, -method.fajrAngle, false);
+    const sunriseMin = SunTimesHelper.eventUtcMinutes(jd0, city.lat, city.lng, approxNoonH - 4.5, -0.833, false);
+    const dhuhrMin = SunTimesHelper.eventUtcMinutes(jd0, city.lat, city.lng, approxNoonH);
 
-    const decl = 0.006918 -
-      0.399912 * Math.cos(gamma) +
-      0.070257 * Math.sin(gamma) -
-      0.006758 * Math.cos(2 * gamma) +
-      0.000907 * Math.sin(2 * gamma) -
-      0.002697 * Math.cos(3 * gamma) +
-      0.00148 * Math.sin(3 * gamma);
-
-    const solarNoonUtcMin = 720 - 4 * city.lng - eqTime;
-
-    const hourAngleDeg = (sunAltDeg) => {
-      const cosHA = (Math.sin(sunAltDeg * rad) - Math.sin(city.lat * rad) * Math.sin(decl)) /
-        (Math.cos(city.lat * rad) * Math.cos(decl));
-      return Math.acos(Math.max(-1, Math.min(1, cosHA))) * deg;
-    };
-
-    const fajrMin = solarNoonUtcMin - 4 * hourAngleDeg(-method.fajrAngle);
-    const sunriseMin = solarNoonUtcMin - 4 * hourAngleDeg(-0.833);
-    const dhuhrMin = solarNoonUtcMin + 1;
-
+    const asrPos = SunTimesHelper.solarPositionAtJd(jd0 + (approxNoonH + 3.0) / 24);
     const shadowFactor = useHanafi ? 2 : 1;
-    const asrCot = shadowFactor + Math.tan(Math.abs(city.lat * rad - decl));
+    const asrCot = shadowFactor + Math.tan(Math.abs(city.lat - asrPos.declDeg) * rad);
     const asrAltDeg = Math.atan(1 / asrCot) * deg;
-    const asrMin = solarNoonUtcMin + 4 * hourAngleDeg(asrAltDeg);
+    const asrMin = SunTimesHelper.eventUtcMinutes(jd0, city.lat, city.lng, approxNoonH + 3.0, asrAltDeg, true);
 
-    const maghribMin = solarNoonUtcMin + 4 * hourAngleDeg(-0.833);
+    const maghribMin = SunTimesHelper.eventUtcMinutes(jd0, city.lat, city.lng, approxNoonH + 5.0, -0.833, true);
     const ishaMin = method.ishaMinutes !== null
       ? maghribMin + method.ishaMinutes
-      : solarNoonUtcMin + 4 * hourAngleDeg(-method.ishaAngle);
+      : SunTimesHelper.eventUtcMinutes(jd0, city.lat, city.lng, approxNoonH + 6.5, -method.ishaAngle, true);
 
     const utcMidnight = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
     const toLocalDate = (utcMin) => new Date(utcMidnight + Math.round(utcMin) * 60000);

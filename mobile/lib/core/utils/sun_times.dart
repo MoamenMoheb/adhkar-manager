@@ -83,42 +83,92 @@ class SunTimesCalculator {
     return cities.first;
   }
 
-  /// Calculates astronomical Sunrise (الشروق) and Sunset/Maghrib (المغرب)
-  /// for the given local [date] and [lat]/[lng] using NOAA solar equations.
-  static SunTimesResult calculate(DateTime date, double lat, double lng) {
+  /// Converts Gregorian [year]/[month]/[day] at 00:00 UTC to Julian Day.
+  static double julianDayUtc(int year, int month, int day) {
+    int y = year;
+    int m = month;
+    if (m <= 2) {
+      y -= 1;
+      m += 12;
+    }
+    final a = y ~/ 100;
+    final b = 2 - a + (a ~/ 4);
+    return (365.25 * (y + 4716)).floor() + (30.6001 * (m + 1)).floor() + day + b - 1524.5;
+  }
+
+  /// High-precision Jean Meeus solar declination (degrees) & equation of time (minutes)
+  /// evaluated at [jd] (Julian Day including fractional UTC hour).
+  static ({double declDeg, double eqTimeMin}) solarPositionAtJd(double jd) {
     const double rad = math.pi / 180.0;
     const double deg = 180.0 / math.pi;
+    final d = jd - 2451545.0;
+    final g = (357.529 + 0.98560028 * d) % 360.0;
+    final q = (280.459 + 0.98564736 * d) % 360.0;
+    final l = (q + 1.915 * math.sin(g * rad) + 0.020 * math.sin(2.0 * g * rad)) % 360.0;
+    final e = 23.439 - 0.00000036 * d;
 
-    final startOfYear = DateTime(date.year, 1, 1);
-    final dayOfYear = date.difference(startOfYear).inDays + 1;
-    final gamma = (2.0 * math.pi / 365.0) * (dayOfYear - 1);
+    double raHours = (math.atan2(math.cos(e * rad) * math.sin(l * rad), math.cos(l * rad)) * deg / 15.0) % 24.0;
+    if (raHours < 0) raHours += 24.0;
 
-    final eqTime = 229.18 *
-        (0.000075 +
-            0.001868 * math.cos(gamma) -
-            0.032077 * math.sin(gamma) -
-            0.014615 * math.cos(2 * gamma) -
-            0.040849 * math.sin(2 * gamma));
+    double eqHours = (q / 15.0) - raHours;
+    if (eqHours > 12.0) eqHours -= 24.0;
+    if (eqHours < -12.0) eqHours += 24.0;
 
-    final decl = 0.006918 -
-        0.399912 * math.cos(gamma) +
-        0.070257 * math.sin(gamma) -
-        0.006758 * math.cos(2 * gamma) +
-        0.000907 * math.sin(2 * gamma) -
-        0.002697 * math.cos(3 * gamma) +
-        0.00148 * math.sin(3 * gamma);
+    final declDeg = math.asin(math.sin(e * rad) * math.sin(l * rad)) * deg;
+    return (declDeg: declDeg, eqTimeMin: eqHours * 60.0);
+  }
 
-    final cosHA = (math.cos(90.833 * rad) / (math.cos(lat * rad) * math.cos(decl))) -
-        math.tan(lat * rad) * math.tan(decl);
-    final clampedCos = cosHA.clamp(-1.0, 1.0);
-    final ha = math.acos(clampedCos) * deg;
+  /// Solar hour angle (degrees) for [sunAltitudeDeg] at [lat]/[declDeg].
+  static double hourAngleDeg(double lat, double declDeg, double sunAltitudeDeg) {
+    const double rad = math.pi / 180.0;
+    const double deg = 180.0 / math.pi;
+    final cosHA = (math.sin(sunAltitudeDeg * rad) -
+            math.sin(lat * rad) * math.sin(declDeg * rad)) /
+        (math.cos(lat * rad) * math.cos(declDeg * rad));
+    return math.acos(cosHA.clamp(-1.0, 1.0)) * deg;
+  }
 
-    final sunriseUtcMinutes = (720.0 - 4.0 * (lng + ha) - eqTime).round();
-    final sunsetUtcMinutes = (720.0 - 4.0 * (lng - ha) - eqTime).round();
+  /// Computes a prayer/solar event in UTC minutes using Meeus position at [approxUtcHours].
+  static double eventUtcMinutes({
+    required double jd0,
+    required double lat,
+    required double lng,
+    required double approxUtcHours,
+    double? sunAltitudeDeg,
+    bool afterNoon = false,
+  }) {
+    final pos = solarPositionAtJd(jd0 + approxUtcHours / 24.0);
+    final noonUtcMin = 720.0 - 4.0 * lng - pos.eqTimeMin;
+    if (sunAltitudeDeg == null) return noonUtcMin;
+    final ha = hourAngleDeg(lat, pos.declDeg, sunAltitudeDeg);
+    return noonUtcMin + (afterNoon ? 4.0 * ha : -4.0 * ha);
+  }
+
+  /// Calculates astronomical Sunrise (الشروق) and Sunset/Maghrib (المغرب)
+  /// for the given local [date] and [lat]/[lng] using Jean Meeus solar equations.
+  static SunTimesResult calculate(DateTime date, double lat, double lng) {
+    final jd0 = julianDayUtc(date.year, date.month, date.day);
+    final approxNoonH = 12.0 - lng / 15.0;
+    final sunriseUtcMin = eventUtcMinutes(
+      jd0: jd0,
+      lat: lat,
+      lng: lng,
+      approxUtcHours: approxNoonH - 4.5,
+      sunAltitudeDeg: -0.833,
+      afterNoon: false,
+    );
+    final sunsetUtcMin = eventUtcMinutes(
+      jd0: jd0,
+      lat: lat,
+      lng: lng,
+      approxUtcHours: approxNoonH + 5.0,
+      sunAltitudeDeg: -0.833,
+      afterNoon: true,
+    );
 
     final utcDayMidnight = DateTime.utc(date.year, date.month, date.day);
-    final sunriseLocal = utcDayMidnight.add(Duration(minutes: sunriseUtcMinutes)).toLocal();
-    final sunsetLocal = utcDayMidnight.add(Duration(minutes: sunsetUtcMinutes)).toLocal();
+    final sunriseLocal = utcDayMidnight.add(Duration(minutes: sunriseUtcMin.round())).toLocal();
+    final sunsetLocal = utcDayMidnight.add(Duration(minutes: sunsetUtcMin.round())).toLocal();
 
     return SunTimesResult(sunrise: sunriseLocal, sunset: sunsetLocal);
   }

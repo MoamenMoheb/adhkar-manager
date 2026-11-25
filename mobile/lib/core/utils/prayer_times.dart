@@ -109,47 +109,63 @@ class PrayerTimesCalculator {
     const double rad = math.pi / 180.0;
     const double deg = 180.0 / math.pi;
 
-    final startOfYear = DateTime(date.year, 1, 1);
-    final dayOfYear = date.difference(startOfYear).inDays + 1;
-    final gamma = (2.0 * math.pi / 365.0) * (dayOfYear - 1);
+    final jd0 = SunTimesCalculator.julianDayUtc(date.year, date.month, date.day);
+    final approxNoonH = 12.0 - city.lng / 15.0;
 
-    final eqTime = 229.18 *
-        (0.000075 +
-            0.001868 * math.cos(gamma) -
-            0.032077 * math.sin(gamma) -
-            0.014615 * math.cos(2 * gamma) -
-            0.040849 * math.sin(2 * gamma));
+    final fajrMin = SunTimesCalculator.eventUtcMinutes(
+      jd0: jd0,
+      lat: city.lat,
+      lng: city.lng,
+      approxUtcHours: approxNoonH - 6.0,
+      sunAltitudeDeg: -usedMethod.fajrAngle,
+      afterNoon: false,
+    );
+    final sunriseMin = SunTimesCalculator.eventUtcMinutes(
+      jd0: jd0,
+      lat: city.lat,
+      lng: city.lng,
+      approxUtcHours: approxNoonH - 4.5,
+      sunAltitudeDeg: -0.833,
+      afterNoon: false,
+    );
+    final dhuhrMin = SunTimesCalculator.eventUtcMinutes(
+      jd0: jd0,
+      lat: city.lat,
+      lng: city.lng,
+      approxUtcHours: approxNoonH,
+    );
 
-    final decl = 0.006918 -
-        0.399912 * math.cos(gamma) +
-        0.070257 * math.sin(gamma) -
-        0.006758 * math.cos(2 * gamma) +
-        0.000907 * math.sin(2 * gamma) -
-        0.002697 * math.cos(3 * gamma) +
-        0.00148 * math.sin(3 * gamma);
-
-    final solarNoonUtcMin = 720.0 - 4.0 * city.lng - eqTime;
-
-    double hourAngleDeg(double sunAltitudeDeg) {
-      final cosHA = (math.sin(sunAltitudeDeg * rad) -
-              math.sin(city.lat * rad) * math.sin(decl)) /
-          (math.cos(city.lat * rad) * math.cos(decl));
-      return math.acos(cosHA.clamp(-1.0, 1.0)) * deg;
-    }
-
-    final fajrMin = solarNoonUtcMin - 4.0 * hourAngleDeg(-usedMethod.fajrAngle);
-    final sunriseMin = solarNoonUtcMin - 4.0 * hourAngleDeg(-0.833);
-    final dhuhrMin = solarNoonUtcMin + 1.0;
-
+    final asrPos = SunTimesCalculator.solarPositionAtJd(jd0 + (approxNoonH + 3.0) / 24.0);
     final shadowFactor = hanafiAsr ? 2.0 : 1.0;
-    final asrCot = shadowFactor + math.tan((city.lat * rad - decl).abs());
+    final asrCot = shadowFactor + math.tan(((city.lat - asrPos.declDeg).abs()) * rad);
     final asrAltDeg = math.atan(1.0 / asrCot) * deg;
-    final asrMin = solarNoonUtcMin + 4.0 * hourAngleDeg(asrAltDeg);
+    final asrMin = SunTimesCalculator.eventUtcMinutes(
+      jd0: jd0,
+      lat: city.lat,
+      lng: city.lng,
+      approxUtcHours: approxNoonH + 3.0,
+      sunAltitudeDeg: asrAltDeg,
+      afterNoon: true,
+    );
 
-    final maghribMin = solarNoonUtcMin + 4.0 * hourAngleDeg(-0.833);
+    final maghribMin = SunTimesCalculator.eventUtcMinutes(
+      jd0: jd0,
+      lat: city.lat,
+      lng: city.lng,
+      approxUtcHours: approxNoonH + 5.0,
+      sunAltitudeDeg: -0.833,
+      afterNoon: true,
+    );
     final ishaMin = usedMethod.ishaMinutesAfterMaghrib != null
         ? maghribMin + usedMethod.ishaMinutesAfterMaghrib!
-        : solarNoonUtcMin + 4.0 * hourAngleDeg(-usedMethod.ishaAngle);
+        : SunTimesCalculator.eventUtcMinutes(
+            jd0: jd0,
+            lat: city.lat,
+            lng: city.lng,
+            approxUtcHours: approxNoonH + 6.5,
+            sunAltitudeDeg: -usedMethod.ishaAngle,
+            afterNoon: true,
+          );
 
     final utcDayMidnight = DateTime.utc(date.year, date.month, date.day);
     DateTime toLocalTime(double utcMinutes) =>

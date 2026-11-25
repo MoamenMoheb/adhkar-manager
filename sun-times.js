@@ -103,6 +103,55 @@ class SunTimesHelper {
     return val;
   }
 
+  static julianDayUtc(year, month, day) {
+    let y = year;
+    let m = month;
+    if (m <= 2) {
+      y -= 1;
+      m += 12;
+    }
+    const a = Math.floor(y / 100);
+    const b = 2 - a + Math.floor(a / 4);
+    return Math.floor(365.25 * (y + 4716)) + Math.floor(30.6001 * (m + 1)) + day + b - 1524.5;
+  }
+
+  static solarPositionAtJd(jd) {
+    const rad = Math.PI / 180;
+    const deg = 180 / Math.PI;
+    const d = jd - 2451545.0;
+    const g = (357.529 + 0.98560028 * d) % 360;
+    const q = (280.459 + 0.98564736 * d) % 360;
+    const l = (q + 1.915 * Math.sin(g * rad) + 0.020 * Math.sin(2 * g * rad)) % 360;
+    const e = 23.439 - 0.00000036 * d;
+
+    let raHours = (Math.atan2(Math.cos(e * rad) * Math.sin(l * rad), Math.cos(l * rad)) * deg / 15) % 24;
+    if (raHours < 0) raHours += 24;
+
+    let eqHours = (q / 15) - raHours;
+    if (eqHours > 12) eqHours -= 24;
+    if (eqHours < -12) eqHours += 24;
+
+    const declDeg = Math.asin(Math.sin(e * rad) * Math.sin(l * rad)) * deg;
+    return { declDeg, eqTimeMin: eqHours * 60 };
+  }
+
+  static hourAngleDeg(lat, declDeg, sunAltitudeDeg) {
+    const rad = Math.PI / 180;
+    const deg = 180 / Math.PI;
+    const cosHA = (Math.sin(sunAltitudeDeg * rad) -
+      Math.sin(lat * rad) * Math.sin(declDeg * rad)) /
+      (Math.cos(lat * rad) * Math.cos(declDeg * rad));
+    return Math.acos(Math.max(-1, Math.min(1, cosHA))) * deg;
+  }
+
+  static eventUtcMinutes(jd0, lat, lng, approxUtcHours, sunAltitudeDeg = null, afterNoon = false) {
+    const pos = this.solarPositionAtJd(jd0 + approxUtcHours / 24);
+    const noonUtcMin = 720 - 4 * lng - pos.eqTimeMin;
+    if (sunAltitudeDeg === null) return noonUtcMin;
+    const ha = this.hourAngleDeg(lat, pos.declDeg, sunAltitudeDeg);
+    return noonUtcMin + (afterNoon ? 4 * ha : -4 * ha);
+  }
+
   static calculate(date = new Date(), lat = null, lng = null) {
     const city = this.getSelectedCity();
     const useLat = lat !== null ? lat : city.lat;
@@ -110,35 +159,10 @@ class SunTimesHelper {
     const morningOffset = this.getMorningOffset();
     const eveningOffset = this.getEveningOffset();
 
-    const rad = Math.PI / 180;
-    const deg = 180 / Math.PI;
-    const startOfYear = new Date(date.getFullYear(), 0, 1);
-    const dayOfYear = Math.floor((date - startOfYear) / 86400000) + 1;
-    const gamma = (2 * Math.PI / 365) * (dayOfYear - 1);
-
-    const eqTime = 229.18 * (
-      0.000075 +
-      0.001868 * Math.cos(gamma) -
-      0.032077 * Math.sin(gamma) -
-      0.014615 * Math.cos(2 * gamma) -
-      0.040849 * Math.sin(2 * gamma)
-    );
-
-    const decl = 0.006918 -
-      0.399912 * Math.cos(gamma) +
-      0.070257 * Math.sin(gamma) -
-      0.006758 * Math.cos(2 * gamma) +
-      0.000907 * Math.sin(2 * gamma) -
-      0.002697 * Math.cos(3 * gamma) +
-      0.00148 * Math.sin(3 * gamma);
-
-    const cosHA = (Math.cos(90.833 * rad) / (Math.cos(useLat * rad) * Math.cos(decl))) -
-      Math.tan(useLat * rad) * Math.tan(decl);
-    const clampedCos = Math.max(-1, Math.min(1, cosHA));
-    const ha = Math.acos(clampedCos) * deg;
-
-    const sunriseUtcMin = Math.round(720 - 4 * (useLng + ha) - eqTime);
-    const sunsetUtcMin = Math.round(720 - 4 * (useLng - ha) - eqTime);
+    const jd0 = this.julianDayUtc(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    const approxNoonH = 12 - useLng / 15;
+    const sunriseUtcMin = Math.round(this.eventUtcMinutes(jd0, useLat, useLng, approxNoonH - 4.5, -0.833, false));
+    const sunsetUtcMin = Math.round(this.eventUtcMinutes(jd0, useLat, useLng, approxNoonH + 5.0, -0.833, true));
 
     const utcMidnight = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
     const sunrise = new Date(utcMidnight + sunriseUtcMin * 60000);
