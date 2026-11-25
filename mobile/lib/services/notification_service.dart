@@ -14,6 +14,10 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  Timer? _ongoingRefreshTimer;
+
+  /// Live state notifier so switches stay in sync across screens.
+  final ValueNotifier<bool> fixedPrayerNotifNotifier = ValueNotifier<bool>(true);
 
   /// Payload captured on cold-launch from a notification tap.
   String? initialLaunchPayload;
@@ -38,9 +42,9 @@ class NotificationService {
   static const String _prefHanafiAsr = 'prayer_hanafi_asr';
 
   static const int _ongoingPrayerNotifId = 8888;
-  static const String _ongoingChannelId = 'adhkar_ongoing_salah_v1';
+  static const String _ongoingChannelId = 'adhkar_ongoing_salah_v2';
   static const String _ongoingChannelName = 'إشعار الصلاة القادمة الدائم';
-  static const String _ongoingChannelDesc = 'يعرض الصلاة القادمة والعد التنازلي في شريط الإشعارات';
+  static const String _ongoingChannelDesc = 'يعرض الصلاة القادمة والعد التنازلي بشكل ثابت في شريط الإشعارات';
 
   static const String _fastingChannelId = 'adhkar_fasting_reminders';
   static const String _fastingChannelName = 'تذكير صيام التطوع والأيام البيض';
@@ -91,6 +95,7 @@ class NotificationService {
     }
 
     _initialized = true;
+    fixedPrayerNotifNotifier.value = await isFixedPrayerNotifEnabled();
     await scheduleAllReminders();
   }
 
@@ -142,6 +147,7 @@ class NotificationService {
   Future<void> setFixedPrayerNotifEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_prefFixedPrayerNotif, enabled);
+    fixedPrayerNotifNotifier.value = enabled;
     await updateOngoingPrayerNotification();
   }
 
@@ -266,13 +272,19 @@ class NotificationService {
     return '$h12:$m $period';
   }
 
-  /// Displays / refreshes a pinned ongoing notification showing the next Salah, its exact time,
-  /// and a live native Android Chronometer countdown.
+  /// Displays / refreshes a pinned non-removable ForegroundService notification showing
+  /// the next Salah, its exact time, and a live native Android Chronometer countdown.
   Future<void> updateOngoingPrayerNotification() async {
     if (!_initialized) return;
     try {
+      final androidImpl = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       final enabled = await isFixedPrayerNotifEnabled();
+      fixedPrayerNotifNotifier.value = enabled;
+
       if (!enabled) {
+        _ongoingRefreshTimer?.cancel();
+        _ongoingRefreshTimer = null;
+        await androidImpl?.stopForegroundService();
         await _plugin.cancel(_ongoingPrayerNotifId);
         return;
       }
@@ -292,34 +304,68 @@ class NotificationService {
       final title = '🕌 القادم: $label (${_fmtTime12(next.time)})';
       final body = '${city.nameAr} • المتبقي للأذان';
 
-      final details = NotificationDetails(
-        android: AndroidNotificationDetails(
-          _ongoingChannelId,
-          _ongoingChannelName,
-          channelDescription: _ongoingChannelDesc,
-          importance: Importance.low,
-          priority: Priority.low,
-          ongoing: true,
-          autoCancel: false,
-          onlyAlertOnce: true,
-          playSound: false,
-          enableVibration: false,
-          usesChronometer: true,
-          chronometerCountDown: true,
-          showWhen: true,
-          when: next.time.millisecondsSinceEpoch,
-          icon: '@mipmap/ic_launcher',
-        ),
-        iOS: const DarwinNotificationDetails(presentSound: false),
+      final androidDetails = AndroidNotificationDetails(
+        _ongoingChannelId,
+        _ongoingChannelName,
+        channelDescription: _ongoingChannelDesc,
+        importance: Importance.defaultImportance,
+        priority: Priority.low,
+        ongoing: true,
+        autoCancel: false,
+        onlyAlertOnce: true,
+        playSound: false,
+        enableVibration: false,
+        usesChronometer: true,
+        chronometerCountDown: true,
+        showWhen: true,
+        when: next.time.millisecondsSinceEpoch,
+        category: AndroidNotificationCategory.service,
+        visibility: NotificationVisibility.public,
+        icon: '@mipmap/ic_launcher',
       );
 
-      await _plugin.show(
-        _ongoingPrayerNotifId,
-        title,
-        body,
-        details,
-        payload: 'prayer:${next.key}',
-      );
+      if (androidImpl != null) {
+        try {
+          await androidImpl.startForegroundService(
+            _ongoingPrayerNotifId,
+            title,
+            body,
+            notificationDetails: androidDetails,
+            payload: 'prayer:${next.key}',
+            startType: AndroidServiceStartType.startSticky,
+            foregroundServiceTypes: {
+              AndroidServiceForegroundType.foregroundServiceTypeSpecialUse,
+            },
+          );
+        } catch (fgErr) {
+          debugPrint('ForegroundService start notice (falling back to show): $fgErr');
+          await _plugin.show(
+            _ongoingPrayerNotifId,
+            title,
+            body,
+            NotificationDetails(android: androidDetails),
+            payload: 'prayer:${next.key}',
+          );
+        }
+      } else {
+        await _plugin.show(
+          _ongoingPrayerNotifId,
+          title,
+          body,
+          const NotificationDetails(
+            iOS: DarwinNotificationDetails(presentSound: false),
+          ),
+          payload: 'prayer:${next.key}',
+        );
+      }
+
+      // Automatically flip to the next prayer right after the current prayer hits
+      _ongoingRefreshTimer?.cancel();
+      final wait = next.time.difference(now) + const Duration(seconds: 2);
+      final safeWait = wait.inSeconds < 5 ? const Duration(seconds: 5) : wait;
+      _ongoingRefreshTimer = Timer(safeWait, () {
+        updateOngoingPrayerNotification();
+      });
     } catch (e) {
       debugPrint('Failed to update ongoing prayer notification: $e');
     }
@@ -329,7 +375,12 @@ class NotificationService {
     if (!_initialized) return;
 
     try {
-      await _plugin.cancelAll();
+      final pending = await _plugin.pendingNotificationRequests();
+      for (final req in pending) {
+        if (req.id != _ongoingPrayerNotifId) {
+          await _plugin.cancel(req.id);
+        }
+      }
 
       final monThuOn = await isMonThuEnabled();
       final ayyamOn = await isAyyamBeedEnabled();

@@ -40,12 +40,14 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 
     _notifSub = NotificationService.instance.onNotificationTap.listen(_handleNotificationPayload);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final initial = NotificationService.instance.initialLaunchPayload;
       if (initial != null && initial.isNotEmpty) {
         NotificationService.instance.initialLaunchPayload = null;
         _handleNotificationPayload(initial);
       }
+      await NotificationService.instance.requestPermissions();
+      await NotificationService.instance.updateOngoingPrayerNotification();
       _checkForAppUpdates();
     });
   }

@@ -327,15 +327,37 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   Text('إعدادات الأذان والإشعارات', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: primaryTxt)),
                   const Divider(height: 22),
 
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('إشعار دائم للصلاة القادمة في الشريط', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: primaryTxt)),
-                    subtitle: Text('يعرض اسم الصلاة ووقتها والعد التنازلي المتبقي', style: TextStyle(fontSize: 11, color: secondaryTxt)),
-                    value: _fixedNotifEnabled,
-                    onChanged: (val) async {
-                      await _notif.requestPermissions();
-                      await _notif.setFixedPrayerNotifEnabled(val);
-                      setState(() => _fixedNotifEnabled = val);
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _notif.fixedPrayerNotifNotifier,
+                    builder: (context, isFixedEnabled, _) {
+                      return SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text('إشعار دائم للصلاة القادمة في الشريط', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: primaryTxt)),
+                        subtitle: Text(
+                          isFixedEnabled
+                              ? 'مفعل: ثابت في شريط الإشعارات ويعرض العد التنازلي حتى الإيقاف'
+                              : 'معطل: فعّله لعرض الصلاة القادمة والعد التنازلي بشكل ثابت',
+                          style: TextStyle(fontSize: 11, color: secondaryTxt),
+                        ),
+                        value: isFixedEnabled,
+                        onChanged: (val) async {
+                          await _notif.requestPermissions();
+                          await _notif.setFixedPrayerNotifEnabled(val);
+                          if (!mounted) return;
+                          setState(() => _fixedNotifEnabled = val);
+                          ScaffoldMessenger.of(context)
+                            ..hideCurrentSnackBar()
+                            ..showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  val
+                                      ? 'تم تفعيل الإشعار الثابت للصلاة القادمة 📌'
+                                      : 'تم إيقاف الإشعار الثابت للصلاة القادمة',
+                                ),
+                              ),
+                            );
+                        },
+                      );
                     },
                   ),
 

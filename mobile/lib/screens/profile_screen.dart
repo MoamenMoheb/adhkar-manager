@@ -9,6 +9,7 @@ import 'auth_screen.dart';
 import 'hijri_calendar_screen.dart';
 import 'friends_screen.dart';
 import '../services/app_update_service.dart';
+import '../services/notification_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -88,6 +89,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
       subtitle: Text('الإصدار الحالي: v$_appVersion • اضغط للتحقق من التحديثات', style: TextStyle(fontSize: 11, color: secondaryTxt)),
       trailing: Icon(Icons.refresh, size: 18, color: secondaryTxt),
       onTap: _checkUpdateManual,
+    );
+  }
+
+  Widget _buildFixedPrayerNotifTile() {
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
+    return ValueListenableBuilder<bool>(
+      valueListenable: NotificationService.instance.fixedPrayerNotifNotifier,
+      builder: (context, isFixedEnabled, _) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppConstants.cardSurface(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppConstants.borderColor(context)),
+          ),
+          child: SwitchListTile(
+            secondary: Icon(Icons.push_pin_outlined, color: primaryTxt),
+            title: Text(
+              'إشعار الصلاة القادمة الدائم',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryTxt),
+            ),
+            subtitle: Text(
+              isFixedEnabled
+                  ? 'مفعل: ثابت في شريط الإشعارات لا يُزال بالسحب'
+                  : 'معطل: فعّله لعرض العد التنازلي للصلاة القادمة',
+              style: TextStyle(fontSize: 11, color: secondaryTxt),
+            ),
+            value: isFixedEnabled,
+            onChanged: (val) async {
+              await NotificationService.instance.requestPermissions();
+              await NotificationService.instance.setFixedPrayerNotifEnabled(val);
+              if (!mounted) return;
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      val
+                          ? 'تم تفعيل الإشعار الثابت للصلاة القادمة 📌'
+                          : 'تم إيقاف الإشعار الثابت للصلاة القادمة',
+                    ),
+                  ),
+                );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -205,7 +253,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 24),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: _buildUpdateTile(),
+                child: Column(
+                  children: [
+                    _buildFixedPrayerNotifTile(),
+                    const SizedBox(height: 12),
+                    _buildUpdateTile(),
+                  ],
+                ),
               ),
             ],
           ),
@@ -450,6 +504,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const HijriCalendarScreen()));
             },
           ),
+          const SizedBox(height: 16),
+
+          // Fixed Next Prayer Notification Toggle
+          _buildFixedPrayerNotifTile(),
           const SizedBox(height: 16),
 
           // In-app Update Check Tile
