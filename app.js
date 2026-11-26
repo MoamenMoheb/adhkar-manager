@@ -3021,30 +3021,21 @@ function renderMisbahaActiveDhikr() {
     dhikrText.innerText = currentDhikr.text;
   }
 
-  // Virtue
+  // Virtue (keep hidden by default so only Zekr shows; toggled by الفضل button)
+  const virtueBtn = document.getElementById('misbahaViewVirtueBtn');
   if (virtueBox && virtueText) {
+    virtueBox.classList.add('hidden');
     if (currentDhikr.virtue) {
       virtueText.innerText = currentDhikr.virtue;
-      virtueBox.classList.remove('hidden');
+      if (virtueBtn) virtueBtn.classList.remove('hidden');
     } else {
-      virtueBox.classList.add('hidden');
+      if (virtueBtn) virtueBtn.classList.add('hidden');
     }
   }
 
-  // Source / Hadith Reference
-  if (sourceBox && sourceText) {
-    const firstHadith = (currentDhikr.hadiths && currentDhikr.hadiths[0]) ? currentDhikr.hadiths[0] : null;
-    if (firstHadith) {
-      const sources = getHadithSources(firstHadith);
-      if (sources.length > 0) {
-        sourceText.innerText = sources.map(s => s.number ? `${s.book} #${s.number}` : s.book).filter(Boolean).join(' • ');
-        sourceBox.classList.remove('hidden');
-      } else {
-        sourceBox.classList.add('hidden');
-      }
-    } else {
-      sourceBox.classList.add('hidden');
-    }
+  // Keep inline source hidden until Hadiths/Fadl button pressed
+  if (sourceBox) {
+    sourceBox.classList.add('hidden');
   }
 
   // Update Misbaha Hadiths button & badge
@@ -3062,6 +3053,12 @@ function renderMisbahaActiveDhikr() {
 
   // Update Misbaha Counter Button
   updateMisbahaCounterVisual();
+}
+
+function toggleMisbahaVirtueBox() {
+  const virtueBox = document.getElementById('misbahaVirtueBox');
+  if (!virtueBox) return;
+  virtueBox.classList.toggle('hidden');
 }
 
 function openCurrentMisbahaHadiths() {

@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
 import '../core/constants/constants.dart';
+import '../widgets/dhikr_info_actions.dart';
 
 class AdhkarLibraryScreen extends StatefulWidget {
   const AdhkarLibraryScreen({super.key});
@@ -285,80 +286,9 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                       textAlign: TextAlign.right,
                                     ),
                                   ),
-                                  if (item.virtue.isNotEmpty) ...[
+                                  if (item.virtue.trim().isNotEmpty || item.hadiths.isNotEmpty) ...[
                                     const SizedBox(height: 10),
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppConstants.activeSurface(context),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Text(
-                                        item.virtue,
-                                        style: TextStyle(fontSize: 12, color: secondaryTxt),
-                                      ),
-                                    ),
-                                  ],
-                                  if (item.hadiths.isNotEmpty) ...[
-                                    const SizedBox(height: 8),
-                                    Theme(
-                                      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                                      child: ExpansionTile(
-                                        tilePadding: const EdgeInsets.symmetric(horizontal: 4),
-                                        childrenPadding: const EdgeInsets.only(bottom: 6),
-                                        leading: Icon(Icons.menu_book, size: 18, color: secondaryTxt),
-                                        title: Text(
-                                          'التخريج والحديث النبوي (${item.hadiths.length})',
-                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt),
-                                        ),
-                                        children: item.hadiths.map((h) {
-                                          final hText = (h['text'] ?? '').toString();
-                                          final sources = (h['sources'] as List<dynamic>? ?? []);
-                                          return Container(
-                                            margin: const EdgeInsets.only(top: 6),
-                                            padding: const EdgeInsets.all(10),
-                                            decoration: BoxDecoration(
-                                              color: AppConstants.activeSurface(context),
-                                              borderRadius: BorderRadius.circular(10),
-                                              border: Border.all(color: AppConstants.borderColor(context)),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                                              children: [
-                                                Text(
-                                                  hText,
-                                                  style: GoogleFonts.notoNaskhArabic(fontSize: 13, height: 1.7, color: primaryTxt),
-                                                ),
-                                                if (sources.isNotEmpty) ...[
-                                                  const SizedBox(height: 8),
-                                                  Wrap(
-                                                    spacing: 6,
-                                                    runSpacing: 6,
-                                                    children: sources.map((s) {
-                                                      final book = (s['book'] ?? '').toString();
-                                                      final num = (s['number'] ?? '').toString();
-                                                      final label = num.isNotEmpty ? '$book ($num)' : book;
-                                                      return Container(
-                                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                                        decoration: BoxDecoration(
-                                                          color: AppConstants.cardSurface(context),
-                                                          borderRadius: BorderRadius.circular(8),
-                                                          border: Border.all(color: AppConstants.borderColor(context)),
-                                                        ),
-                                                        child: Text(
-                                                          label,
-                                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: secondaryTxt),
-                                                        ),
-                                                      );
-                                                    }).toList(),
-                                                  ),
-                                                ],
-                                              ],
-                                            ),
-                                          );
-                                        }).toList(),
-                                      ),
-                                    ),
+                                    DhikrInfoButtons(dhikr: item, centered: false),
                                   ],
                                 ],
                               ),

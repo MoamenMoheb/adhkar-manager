@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
 import '../models/models.dart';
 import '../services/supabase_service.dart';
+import '../widgets/dhikr_info_actions.dart';
 
 class MisbahaScreen extends StatefulWidget {
   const MisbahaScreen({super.key});
@@ -396,40 +397,30 @@ class MisbahaScreenState extends State<MisbahaScreen> {
                     const Spacer(),
                   ] else ...[
                     Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _activeText,
-                              style: GoogleFonts.notoNaskhArabic(
-                                fontSize: _activeText.length > 180 ? 17 : 21,
-                                fontWeight: FontWeight.bold,
-                                height: 1.8,
-                                color: primaryTxt,
-                              ),
-                              textAlign: TextAlign.center,
+                      child: Center(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          child: Text(
+                            _activeText,
+                            style: GoogleFonts.notoNaskhArabic(
+                              fontSize: _activeText.length > 180 ? 18 : 22,
+                              fontWeight: FontWeight.bold,
+                              height: 1.85,
+                              color: primaryTxt,
                             ),
-                            if (currentDhikr != null && currentDhikr.virtue.isNotEmpty) ...[
-                              const SizedBox(height: 10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: AppConstants.activeSurface(context),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  currentDhikr.virtue,
-                                  style: TextStyle(fontSize: 12, color: secondaryTxt),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ],
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
                     ),
+
+                    if (currentDhikr != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        child: DhikrInfoButtons(dhikr: currentDhikr),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
 
                     GestureDetector(
                       onTap: _tap,
