@@ -78,6 +78,8 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _misbahaKey.currentState?.openFromNotification(mode);
       });
+    } else if (payload == 'open:prayers') {
+      setState(() => _currentIndex = 1);
     } else if (payload.startsWith('prayer:')) {
       final key = payload.substring('prayer:'.length);
       setState(() => _currentIndex = 1);

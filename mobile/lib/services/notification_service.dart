@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -11,6 +13,9 @@ import '../core/utils/prayer_times.dart';
 class NotificationService {
   static final NotificationService instance = NotificationService._internal();
   NotificationService._internal();
+
+  static const MethodChannel _stickyChannel =
+      MethodChannel('com.moamenmoheb.adhkar_sanctuary/sticky_prayer');
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
@@ -93,6 +98,12 @@ class NotificationService {
     } catch (e) {
       debugPrint('Launch details check notice: $e');
     }
+
+    _stickyChannel.setMethodCallHandler((call) async {
+      if (call.method == 'openedFromSticky') {
+        _tapStreamController.add('open:prayers');
+      }
+    });
 
     _initialized = true;
     fixedPrayerNotifNotifier.value = await isFixedPrayerNotifEnabled();
@@ -272,19 +283,28 @@ class NotificationService {
     return '$h12:$m $period';
   }
 
-  /// Displays / refreshes a pinned non-removable ForegroundService notification showing
+  /// Displays / refreshes a pinned non-removable sticky notification showing
   /// the next Salah, its exact time, and a live native Android Chronometer countdown.
   Future<void> updateOngoingPrayerNotification() async {
     if (!_initialized) return;
     try {
-      final androidImpl = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       final enabled = await isFixedPrayerNotifEnabled();
       fixedPrayerNotifNotifier.value = enabled;
+
+      final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
       if (!enabled) {
         _ongoingRefreshTimer?.cancel();
         _ongoingRefreshTimer = null;
-        await androidImpl?.stopForegroundService();
+        if (isAndroid) {
+          try {
+            await _stickyChannel.invokeMethod('stop');
+          } catch (e) {
+            debugPrint('Sticky channel stop notice: $e');
+          }
+          final androidImpl = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+          await androidImpl?.stopForegroundService();
+        }
         await _plugin.cancel(_ongoingPrayerNotifId);
         return;
       }
@@ -293,77 +313,53 @@ class NotificationService {
       final method = PrayerTimesCalculator.getMethodByKey(await getPrayerMethodKey(), cityKey: city.key);
       final hanafi = await isHanafiAsr();
       final now = DateTime.now();
-      final next = PrayerTimesCalculator.getNextPrayer(
-        now: now,
-        city: city,
-        method: method,
-        hanafiAsr: hanafi,
-      );
+      final today = DateTime(now.year, now.month, now.day);
 
-      final label = next.isFardPrayer ? 'صلاة ${next.nameAr}' : next.nameAr;
-      final title = '🕌 القادم: $label (${_fmtTime12(next.time)})';
-      final body = '${city.nameAr} • المتبقي للأذان';
-
-      final androidDetails = AndroidNotificationDetails(
-        _ongoingChannelId,
-        _ongoingChannelName,
-        channelDescription: _ongoingChannelDesc,
-        importance: Importance.defaultImportance,
-        priority: Priority.low,
-        ongoing: true,
-        autoCancel: false,
-        onlyAlertOnce: true,
-        playSound: false,
-        enableVibration: false,
-        usesChronometer: true,
-        chronometerCountDown: true,
-        showWhen: true,
-        when: next.time.millisecondsSinceEpoch,
-        category: AndroidNotificationCategory.service,
-        visibility: NotificationVisibility.public,
-        icon: '@mipmap/ic_launcher',
-      );
-
-      if (androidImpl != null) {
-        try {
-          await androidImpl.startForegroundService(
-            _ongoingPrayerNotifId,
-            title,
-            body,
-            notificationDetails: androidDetails,
-            payload: 'prayer:${next.key}',
-            startType: AndroidServiceStartType.startSticky,
-            foregroundServiceTypes: {
-              AndroidServiceForegroundType.foregroundServiceTypeSpecialUse,
-            },
-          );
-        } catch (fgErr) {
-          debugPrint('ForegroundService start notice (falling back to show): $fgErr');
-          await _plugin.show(
-            _ongoingPrayerNotifId,
-            title,
-            body,
-            NotificationDetails(android: androidDetails),
-            payload: 'prayer:${next.key}',
-          );
+      final List<Map<String, dynamic>> upcoming = [];
+      for (int i = 0; i <= 3; i++) {
+        final dayTimes = PrayerTimesCalculator.calculate(
+          date: today.add(Duration(days: i)),
+          city: city,
+          method: method,
+          hanafiAsr: hanafi,
+        );
+        for (final entry in dayTimes.allEntries) {
+          if (entry.time.isAfter(now)) {
+            final label = entry.isFardPrayer ? 'صلاة ${entry.nameAr}' : entry.nameAr;
+            upcoming.add({
+              'key': entry.key,
+              'title': '🕌 القادم: $label (${_fmtTime12(entry.time)})',
+              'body': '${city.nameAr} • المتبقي للأذان',
+              'timeMs': entry.time.millisecondsSinceEpoch,
+            });
+          }
         }
+      }
+
+      if (upcoming.isEmpty) return;
+
+      if (isAndroid) {
+        await _stickyChannel.invokeMethod('startOrUpdate', {
+          'scheduleJson': jsonEncode(upcoming),
+        });
       } else {
+        final first = upcoming.first;
         await _plugin.show(
           _ongoingPrayerNotifId,
-          title,
-          body,
+          first['title'] as String,
+          first['body'] as String,
           const NotificationDetails(
             iOS: DarwinNotificationDetails(presentSound: false),
           ),
-          payload: 'prayer:${next.key}',
+          payload: 'open:prayers',
         );
       }
 
-      // Automatically flip to the next prayer right after the current prayer hits
+      final nextMs = upcoming.first['timeMs'] as int;
       _ongoingRefreshTimer?.cancel();
-      final wait = next.time.difference(now) + const Duration(seconds: 2);
-      final safeWait = wait.inSeconds < 5 ? const Duration(seconds: 5) : wait;
-      _ongoingRefreshTimer = Timer(safeWait, () {
+      final diffMs = nextMs - now.millisecondsSinceEpoch + 2000;
+      final safeMs = diffMs < 5000 ? 5000 : diffMs;
+      _ongoingRefreshTimer = Timer(Duration(milliseconds: safeMs), () {
         updateOngoingPrayerNotification();
       });
     } catch (e) {

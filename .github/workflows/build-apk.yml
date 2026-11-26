@@ -35,18 +35,21 @@ jobs:
       - name: Prepare Android Project
         run: |
           cd mobile
-          # Back up our manifest and icons
+          # Back up our manifest, kotlin native code, and icons
           cp android/app/src/main/AndroidManifest.xml /tmp/AndroidManifest.xml
-          mkdir -p /tmp/res_backup
+          mkdir -p /tmp/res_backup /tmp/kotlin_backup
           cp -r android/app/src/main/res/* /tmp/res_backup/ || true
+          cp -r android/app/src/main/kotlin/* /tmp/kotlin_backup/ || true
 
           # Recreate Android scaffolding with Flutter's official matching Gradle/AGP config
           rm -rf android
-          flutter create --platforms android --org com.moamenmoheb .
+          flutter create --platforms android --org com.moamenmoheb --project-name adhkar_sanctuary .
 
-          # Restore our custom AndroidManifest and icons
+          # Restore our custom AndroidManifest, kotlin files, and icons
           cp /tmp/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           cp -r /tmp/res_backup/* android/app/src/main/res/
+          mkdir -p android/app/src/main/kotlin
+          cp -r /tmp/kotlin_backup/* android/app/src/main/kotlin/ || true
 
           # Enable coreLibraryDesugaring for flutter_local_notifications
           python3 - <<'EOF'
