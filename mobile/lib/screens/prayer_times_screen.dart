@@ -7,6 +7,7 @@ import '../core/utils/sun_times.dart';
 import '../core/utils/prayer_times.dart';
 import '../services/azan_audio_service.dart';
 import '../services/notification_service.dart';
+import 'qibla_screen.dart';
 
 class PrayerTimesScreen extends StatefulWidget {
   const PrayerTimesScreen({super.key});
@@ -135,6 +136,19 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
       appBar: AppBar(
         title: Text('مواقيت الصلاة والأذان', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.explore_outlined),
+            tooltip: 'اتجاه القبلة',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QiblaScreen()),
+              );
+              await _loadPrefs();
+            },
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -215,7 +229,62 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+
+          // Quick Qibla Compass Card
+          InkWell(
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const QiblaScreen()),
+              );
+              await _loadPrefs();
+            },
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+              decoration: BoxDecoration(
+                color: AppConstants.cardSurface(context),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppConstants.borderColor(context)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: AppConstants.activeSurface(context),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.explore, color: AppConstants.secondary, size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'بوصلة اتجاه القبلة',
+                          style: GoogleFonts.ibmPlexSansArabic(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: primaryTxt,
+                          ),
+                        ),
+                        Text(
+                          'تحديد القبلة بدقة والمسافة إلى الكعبة المشرفة',
+                          style: TextStyle(fontSize: 11, color: secondaryTxt),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right, color: secondaryTxt),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 14),
 
           // 2. All 5 Prayers + Sunrise Cards
           Card(

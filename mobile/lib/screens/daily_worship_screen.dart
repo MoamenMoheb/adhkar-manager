@@ -6,6 +6,7 @@ import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
 import 'hijri_calendar_screen.dart';
+import 'qibla_screen.dart';
 
 class DailyWorshipScreen extends StatefulWidget {
   const DailyWorshipScreen({super.key});
@@ -95,6 +96,14 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
         title: Text('الورد اليومي', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.explore_outlined),
+            tooltip: 'اتجاه القبلة',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const QiblaScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.calendar_month),
             tooltip: 'التقويم الهجري وتنبيهات الصيام',
