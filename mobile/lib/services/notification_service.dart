@@ -324,7 +324,10 @@ class NotificationService {
           hanafiAsr: hanafi,
         );
         for (final entry in dayTimes.allEntries) {
-          if (entry.time.isAfter(now)) {
+          final inPostAzanWindow = entry.isFardPrayer &&
+              !entry.time.isAfter(now) &&
+              now.difference(entry.time) < const Duration(minutes: 10);
+          if (entry.time.isAfter(now) || inPostAzanWindow) {
             final label = entry.isFardPrayer ? 'صلاة ${entry.nameAr}' : entry.nameAr;
             upcoming.add({
               'key': entry.key,
@@ -355,9 +358,11 @@ class NotificationService {
         );
       }
 
-      final nextMs = upcoming.first['timeMs'] as int;
+      final firstMs = upcoming.first['timeMs'] as int;
+      final nowMs = now.millisecondsSinceEpoch;
+      final targetMs = nowMs >= firstMs ? firstMs + 600000 : firstMs;
       _ongoingRefreshTimer?.cancel();
-      final diffMs = nextMs - now.millisecondsSinceEpoch + 2000;
+      final diffMs = targetMs - nowMs + 1500;
       final safeMs = diffMs < 5000 ? 5000 : diffMs;
       _ongoingRefreshTimer = Timer(Duration(milliseconds: safeMs), () {
         updateOngoingPrayerNotification();

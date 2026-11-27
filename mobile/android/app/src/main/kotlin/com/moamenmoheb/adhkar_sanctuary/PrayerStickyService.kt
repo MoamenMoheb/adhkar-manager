@@ -20,13 +20,13 @@ class PrayerStickyService : Service() {
             return START_NOT_STICKY
         }
 
-        val item = PrayerStickyHelper.findNextPrayer(this)
-        if (item == null) {
+        val state = PrayerStickyHelper.findActiveState(this)
+        if (state == null) {
             stopCleanly()
             return START_NOT_STICKY
         }
 
-        val notif = PrayerStickyHelper.buildNotification(this, item)
+        val notif = PrayerStickyHelper.buildNotification(this, state)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 PrayerStickyHelper.NOTIF_ID,
@@ -37,8 +37,8 @@ class PrayerStickyService : Service() {
             startForeground(PrayerStickyHelper.NOTIF_ID, notif)
         }
 
-        PrayerStickyHelper.scheduleTransitionAlarm(this, item.timeMs)
-        scheduleNextTransition(item.timeMs)
+        PrayerStickyHelper.scheduleTransitionAlarm(this, state.countdownTargetMs)
+        scheduleNextTransition(state.countdownTargetMs)
         return START_STICKY
     }
 
