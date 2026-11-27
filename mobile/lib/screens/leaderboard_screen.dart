@@ -148,7 +148,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               children: [
                 Expanded(
                   child: ChoiceChip(
-                    label: Center(child: Text('👥 أصدقائي', style: TextStyle(color: _onlyFriends ? Colors.white : secondaryTxt, fontWeight: FontWeight.bold))),
+                    label: Center(child: Text('أصدقائي', style: TextStyle(color: _onlyFriends ? Colors.white : secondaryTxt, fontWeight: FontWeight.bold))),
                     selected: _onlyFriends,
                     selectedColor: selectedBg,
                     backgroundColor: AppConstants.cardSurface(context),
@@ -162,7 +162,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ChoiceChip(
-                    label: Center(child: Text('🌍 الترتيب العام', style: TextStyle(color: !_onlyFriends ? Colors.white : secondaryTxt, fontWeight: FontWeight.bold))),
+                    label: Center(child: Text('الترتيب العام', style: TextStyle(color: !_onlyFriends ? Colors.white : secondaryTxt, fontWeight: FontWeight.bold))),
                     selected: !_onlyFriends,
                     selectedColor: selectedBg,
                     backgroundColor: AppConstants.cardSurface(context),
@@ -307,7 +307,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                   ],
                                 ],
                               ),
-                              subtitle: Text('🔥 ${item.streakCount} يوم متتالي', style: TextStyle(fontSize: 12, color: secondaryTxt)),
+                              subtitle: Text('${item.streakCount} يوم متتالي', style: TextStyle(fontSize: 12, color: secondaryTxt)),
                               trailing: Text(
                                 '${item.points} نقطة',
                                 style: TextStyle(fontWeight: FontWeight.bold, color: primaryTxt, fontSize: 14),

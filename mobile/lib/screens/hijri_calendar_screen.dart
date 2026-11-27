@@ -722,7 +722,7 @@ class _HijriCalendarScreenState extends State<HijriCalendarScreen> {
           buildPill('٣٠ د', currentMinutes == 30, () => _updateAdhkarOffset(isMorning: isMorning, minutes: 30)),
           buildPill('ساعة (٦٠ د)', currentMinutes == 60, () => _updateAdhkarOffset(isMorning: isMorning, minutes: 60)),
           buildPill(
-            isCustom ? '$currentMinutes د ✎' : 'تخصيص ✎',
+            isCustom ? '$currentMinutes د' : 'تخصيص',
             isCustom,
             () => _showCustomOffsetDialog(isMorning: isMorning),
           ),

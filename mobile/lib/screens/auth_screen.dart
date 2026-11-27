@@ -135,7 +135,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   const Text('الجنس:', style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(width: 16),
                   ChoiceChip(
-                    label: const Text('🚹 رجل'),
+                    label: const Text('رجل'),
                     selected: _gender == 'male',
                     selectedColor: AppConstants.accentBg(context),
                     labelStyle: TextStyle(color: _gender == 'male' ? Colors.white : AppConstants.textSecondary(context)),
@@ -143,7 +143,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                   const SizedBox(width: 8),
                   ChoiceChip(
-                    label: const Text('🚺 امرأة'),
+                    label: const Text('امرأة'),
                     selected: _gender == 'female',
                     selectedColor: AppConstants.accentBg(context),
                     labelStyle: TextStyle(color: _gender == 'female' ? Colors.white : AppConstants.textSecondary(context)),

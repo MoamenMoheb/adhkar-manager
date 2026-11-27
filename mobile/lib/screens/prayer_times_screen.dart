@@ -203,7 +203,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                         ),
                         icon: Icon(playing ? Icons.stop_circle : Icons.volume_up),
                         label: Text(
-                          playing ? 'إيقاف صوت الأذان' : 'تشغيل أذان الحرم المكي 🕌',
+                          playing ? 'إيقاف صوت الأذان' : 'تشغيل أذان الحرم المكي',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         onPressed: () => _audio.playAzan(shortTakbeer: false),
@@ -351,7 +351,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                               SnackBar(
                                 content: Text(
                                   val
-                                      ? 'تم تفعيل الإشعار الثابت للصلاة القادمة 📌'
+                                      ? 'تم تفعيل الإشعار الثابت للصلاة القادمة'
                                       : 'تم إيقاف الإشعار الثابت للصلاة القادمة',
                                 ),
                               ),

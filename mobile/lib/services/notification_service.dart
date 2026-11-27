@@ -426,8 +426,8 @@ class NotificationService {
 
           final effectiveMode = entry.key == 'sunrise' && soundMode == 'azan' ? 'takbeer' : soundMode;
           final title = entry.isFardPrayer
-              ? '🕌 حان الآن موعد صلاة ${entry.nameAr}'
-              : '☀️ حان الآن وقت الشروق (${city.nameAr})';
+              ? 'حان الآن موعد صلاة ${entry.nameAr}'
+              : 'حان الآن وقت الشروق (${city.nameAr})';
           final body = entry.isFardPrayer
               ? 'حيّ على الصلاة، حيّ على الفلاح • ${_fmtTime12(entry.time)}'
               : 'انتهى وقت الفجر وأشرقت الشمس';
@@ -458,7 +458,7 @@ class NotificationService {
             await _scheduleOne(
               id: adhkarNotifId++,
               scheduledLocal: morningTarget,
-              title: '☀️ أذكار الصباح',
+              title: 'أذكار الصباح',
               body: null,
               channelId: _adhkarChannelId,
               channelName: _adhkarChannelName,
@@ -471,7 +471,7 @@ class NotificationService {
             await _scheduleOne(
               id: adhkarNotifId++,
               scheduledLocal: eveningTarget,
-              title: '🌙 أذكار المساء',
+              title: 'أذكار المساء',
               body: null,
               channelId: _adhkarChannelId,
               channelName: _adhkarChannelName,
@@ -512,7 +512,7 @@ class NotificationService {
             await _scheduleOne(
               id: fastingNotifId++,
               scheduledLocal: eveLocal,
-              title: '🌙 تذكير بصيام غداً: $reasonStr',
+              title: 'تذكير بصيام غداً: $reasonStr',
               body: 'لا تنسَ تبييت نية الصيام والاستعداد للسحور.',
               channelId: _fastingChannelId,
               channelName: _fastingChannelName,
@@ -525,7 +525,7 @@ class NotificationService {
             await _scheduleOne(
               id: fastingNotifId++,
               scheduledLocal: morningLocal,
-              title: '☀️ اليوم صيام سُنّة: $reasonStr',
+              title: 'اليوم صيام سُنّة: $reasonStr',
               body: 'تقبل الله صيامك.',
               channelId: _fastingChannelId,
               channelName: _fastingChannelName,

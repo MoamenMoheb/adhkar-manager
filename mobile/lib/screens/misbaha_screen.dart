@@ -259,11 +259,11 @@ class MisbahaScreenState extends State<MisbahaScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        modeChip('morning', '☀️ الصباح'),
+                        modeChip('morning', 'الصباح'),
                         const SizedBox(width: 6),
-                        modeChip('evening', '🌙 المساء'),
+                        modeChip('evening', 'المساء'),
                         const SizedBox(width: 6),
-                        modeChip('free', '📿 تسبيح حر'),
+                        modeChip('free', 'تسبيح حر'),
                       ],
                     ),
                   ),

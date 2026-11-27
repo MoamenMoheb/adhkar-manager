@@ -68,7 +68,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await AppUpdateService.instance.showUpdateDialog(context, update);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('أنت تستخدم أحدث إصدار من التطبيق (v$_appVersion) ✅')),
+        SnackBar(content: Text('أنت تستخدم أحدث إصدار من التطبيق (v$_appVersion)')),
       );
     }
   }
@@ -127,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SnackBar(
                     content: Text(
                       val
-                          ? 'تم تفعيل الإشعار الثابت للصلاة القادمة 📌'
+                          ? 'تم تفعيل الإشعار الثابت للصلاة القادمة'
                           : 'تم إيقاف الإشعار الثابت للصلاة القادمة',
                     ),
                   ),
@@ -160,8 +160,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       const TabBar(
                         tabs: [
-                          Tab(text: '🚹 صور الرجال (10)'),
-                          Tab(text: '🚺 صور النساء (10)'),
+                          Tab(text: 'صور الرجال (10)'),
+                          Tab(text: 'صور النساء (10)'),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -314,7 +314,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(8)),
-                        child: const Text('⭐ Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.brown)),
+                        child: const Text('Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.brown)),
                       ),
                     ],
                   ],
@@ -353,7 +353,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       if (code.isNotEmpty) {
                         Clipboard.setData(ClipboardData(text: code));
                       }
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ كود الصداقة بنجاح 📋')));
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم نسخ كود الصداقة بنجاح')));
                     },
                   ),
                 ],
@@ -372,10 +372,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               final isDark = AppConstants.isDark(context);
 
               final String privacyDesc = currentPrivacy == 'public'
-                  ? '🌍 عام: نقاطك وترتيبك يظهران للجميع في لوحة الصدارة العامة (ضمن نفس الجنس) وللأصدقاء.'
+                  ? 'عام: نقاطك وترتيبك يظهران للجميع في لوحة الصدارة العامة (ضمن نفس الجنس) وللأصدقاء.'
                   : (currentPrivacy == 'friends'
-                      ? '👥 أصدقائي: نقاطك وترتيبك يظهران لأصدقائك المقبولين فقط ولا يظهران في الترتيب العام.'
-                      : '🔒 خاص: نقاطك وترتيبك مخفيان تماماً عن الجميع ولن يظهرا في أي لوحة صدارة.');
+                      ? 'أصدقائي: نقاطك وترتيبك يظهران لأصدقائك المقبولين فقط ولا يظهران في الترتيب العام.'
+                      : 'خاص: نقاطك وترتيبك مخفيان تماماً عن الجميع ولن يظهرا في أي لوحة صدارة.');
 
               Widget buildPrivacyOption(String level, String label, IconData icon) {
                 final selected = currentPrivacy == level;

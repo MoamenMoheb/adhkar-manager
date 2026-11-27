@@ -164,7 +164,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                     child: ChoiceChip(
                       label: Center(
                         child: Text(
-                          '☀️ الصباح',
+                          'الصباح',
                           style: TextStyle(color: _morningEveningSubFilter == 'morning' ? Colors.white : secondaryTxt, fontSize: 12),
                         ),
                       ),
@@ -180,7 +180,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                     child: ChoiceChip(
                       label: Center(
                         child: Text(
-                          '🌙 المساء',
+                          'المساء',
                           style: TextStyle(color: _morningEveningSubFilter == 'evening' ? Colors.white : secondaryTxt, fontSize: 12),
                         ),
                       ),
@@ -255,7 +255,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                             borderRadius: BorderRadius.circular(10),
                                           ),
                                           child: Text(
-                                            isDone ? '✓ تم ($currentCount/${item.repeats})' : '$currentCount / ${item.repeats}',
+                                            isDone ? 'تم ($currentCount/${item.repeats})' : '$currentCount / ${item.repeats}',
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
