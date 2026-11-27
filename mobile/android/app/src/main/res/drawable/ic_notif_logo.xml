@@ -3,21 +3,21 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- Hexagonal 6-pointed Islamic star frame -->
+    <!-- Classic 8-pointed Islamic Star (Rub el Hizb: two overlapping squares at 45 deg) -->
     <path
         android:fillColor="#00000000"
-        android:pathData="M12,2.2 L20.49,16.9 L3.51,16.9 Z"
+        android:pathData="M5.1,5.1 H18.9 V18.9 H5.1 Z"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineJoin="miter"
         android:strokeWidth="1.35" />
     <path
         android:fillColor="#00000000"
-        android:pathData="M12,21.8 L20.49,7.1 L3.51,7.1 Z"
+        android:pathData="M12,2.2 L21.8,12 L12,21.8 L2.2,12 Z"
         android:strokeColor="#FFFFFFFF"
         android:strokeLineJoin="miter"
         android:strokeWidth="1.35" />
-    <!-- Mosque dome & twin minarets inside star -->
+    <!-- Mosque dome & twin minarets inside octagon center -->
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M8.6,15.6 L8.6,13.5 C8.6,11.6 10.1,10.2 12,9.4 C13.9,10.2 15.4,11.6 15.4,13.5 L15.4,15.6 Z M11.75,8.0 L12.25,8.0 L12.25,9.5 L11.75,9.5 Z M7.1,9.0 L8.0,9.0 L8.0,15.6 L7.1,15.6 Z M16.0,9.0 L16.9,9.0 L16.9,15.6 L16.0,15.6 Z" />
+        android:pathData="M8.8,15.6 L8.8,13.6 C8.8,11.7 10.2,10.3 12,9.5 C13.8,10.3 15.2,11.7 15.2,13.6 L15.2,15.6 Z M11.75,8.1 L12.25,8.1 L12.25,9.6 L11.75,9.6 Z M7.3,9.1 L8.2,9.1 L8.2,15.6 L7.3,15.6 Z M15.8,9.1 L16.7,9.1 L16.7,15.6 L15.8,15.6 Z" />
 </vector>
