@@ -316,7 +316,7 @@ class NotificationService {
       final today = DateTime(now.year, now.month, now.day);
 
       final List<Map<String, dynamic>> upcoming = [];
-      for (int i = 0; i <= 3; i++) {
+      for (int i = 0; i <= 10; i++) {
         final dayTimes = PrayerTimesCalculator.calculate(
           date: today.add(Duration(days: i)),
           city: city,
@@ -328,8 +328,8 @@ class NotificationService {
             final label = entry.isFardPrayer ? 'صلاة ${entry.nameAr}' : entry.nameAr;
             upcoming.add({
               'key': entry.key,
-              'title': '🕌 القادم: $label (${_fmtTime12(entry.time)})',
-              'body': '${city.nameAr} • المتبقي للأذان',
+              'title': label,
+              'body': _fmtTime12(entry.time),
               'timeMs': entry.time.millisecondsSinceEpoch,
             });
           }

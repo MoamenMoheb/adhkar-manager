@@ -45,6 +45,9 @@
             android:name=".PrayerDismissReceiver"
             android:exported="false" />
         <receiver
+            android:name=".PrayerTransitionReceiver"
+            android:exported="false" />
+        <receiver
             android:name=".PrayerBootReceiver"
             android:exported="false">
             <intent-filter>

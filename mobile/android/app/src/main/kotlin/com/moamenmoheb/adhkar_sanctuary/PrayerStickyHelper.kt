@@ -1,11 +1,13 @@
 package com.moamenmoheb.adhkar_sanctuary
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Build
 import org.json.JSONArray
 
@@ -19,6 +21,7 @@ data class UpcomingPrayerItem(
 object PrayerStickyHelper {
     const val NOTIF_ID = 8888
     const val CHANNEL_ID = "adhkar_sticky_salah_top_v3"
+    private const val TRANSITION_REQUEST_CODE = 8891
     private const val PREFS_NAME = "adhkar_sticky_prayer"
     private const val KEY_ENABLED = "enabled"
     private const val KEY_SCHEDULE = "schedule_json"
@@ -109,7 +112,7 @@ object PrayerStickyHelper {
         val deletePi = PendingIntent.getBroadcast(context, NOTIF_ID + 1, dismissIntent, piFlags)
 
         val iconRes = context.resources
-            .getIdentifier("ic_launcher", "mipmap", context.packageName)
+            .getIdentifier("ic_notif_empty", "drawable", context.packageName)
             .takeIf { it != 0 } ?: context.applicationInfo.icon
 
         val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -135,6 +138,9 @@ object PrayerStickyHelper {
             .setContentIntent(contentPi)
             .setDeleteIntent(deletePi)
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            builder.setColor(Color.TRANSPARENT)
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             builder.setChronometerCountDown(true)
         }
@@ -151,12 +157,54 @@ object PrayerStickyHelper {
         return notif
     }
 
+    private fun transitionPendingIntent(context: Context): PendingIntent {
+        val intent = Intent(context, PrayerTransitionReceiver::class.java)
+        val piFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            TRANSITION_REQUEST_CODE,
+            intent,
+            piFlags
+        )
+    }
+
+    fun scheduleTransitionAlarm(context: Context, nextPrayerTimeMs: Long) {
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val triggerAt = (nextPrayerTimeMs + 1000L).coerceAtLeast(System.currentTimeMillis() + 5000L)
+        val pi = transitionPendingIntent(context)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()) {
+                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+                } else {
+                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+                }
+            } else {
+                am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            }
+        } catch (_: SecurityException) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            }
+        }
+    }
+
+    fun cancelTransitionAlarm(context: Context) {
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        am.cancel(transitionPendingIntent(context))
+    }
+
     fun startOrRefreshService(context: Context) {
         if (!isEnabled(context)) {
             stopService(context)
             return
         }
         val item = findNextPrayer(context) ?: return
+        scheduleTransitionAlarm(context, item.timeMs)
         val serviceIntent = Intent(context, PrayerStickyService::class.java)
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -173,12 +221,14 @@ object PrayerStickyHelper {
     fun postDirect(context: Context, item: UpcomingPrayerItem? = null) {
         if (!isEnabled(context)) return
         val target = item ?: findNextPrayer(context) ?: return
+        scheduleTransitionAlarm(context, target.timeMs)
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIF_ID, buildNotification(context, target))
     }
 
     fun stopService(context: Context) {
         setEnabled(context, false)
+        cancelTransitionAlarm(context)
         try {
             context.stopService(Intent(context, PrayerStickyService::class.java))
         } catch (_: Exception) {

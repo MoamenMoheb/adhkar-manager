@@ -37,6 +37,7 @@ class PrayerStickyService : Service() {
             startForeground(PrayerStickyHelper.NOTIF_ID, notif)
         }
 
+        PrayerStickyHelper.scheduleTransitionAlarm(this, item.timeMs)
         scheduleNextTransition(item.timeMs)
         return START_STICKY
     }
