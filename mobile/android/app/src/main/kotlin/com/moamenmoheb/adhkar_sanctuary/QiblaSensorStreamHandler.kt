@@ -66,6 +66,18 @@ class QiblaSensorStreamHandler(context: Context) : EventChannel.StreamHandler, S
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
         if (sensor?.type == Sensor.TYPE_MAGNETIC_FIELD || sensor?.type == Sensor.TYPE_ROTATION_VECTOR) {
             currentAccuracy = accuracy
+            lastEmitMs = 0L
+            if (hasFiltered) {
+                var smoothedDeg = Math.toDegrees(atan2(filteredSin, filteredCos))
+                if (smoothedDeg < 0.0) smoothedDeg += 360.0
+                eventSink?.success(
+                    mapOf(
+                        "hasSensor" to true,
+                        "heading" to smoothedDeg,
+                        "accuracy" to currentAccuracy
+                    )
+                )
+            }
         }
     }
 

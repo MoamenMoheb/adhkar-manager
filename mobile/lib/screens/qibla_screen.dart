@@ -5,8 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
 import '../core/utils/qibla_calculator.dart';
-import '../core/utils/sun_times.dart';
-import '../services/notification_service.dart';
 
 class QiblaScreen extends StatefulWidget {
   const QiblaScreen({super.key});
@@ -15,7 +13,7 @@ class QiblaScreen extends StatefulWidget {
   State<QiblaScreen> createState() => _QiblaScreenState();
 }
 
-class _QiblaScreenState extends State<QiblaScreen> {
+class _QiblaScreenState extends State<QiblaScreen> with WidgetsBindingObserver {
   static const EventChannel _compassEvents =
       EventChannel('com.moamenmoheb.adhkar_sanctuary/qibla_compass');
   static const MethodChannel _locationChannel =
@@ -23,10 +21,11 @@ class _QiblaScreenState extends State<QiblaScreen> {
 
   StreamSubscription<dynamic>? _compassSub;
 
-  double _lat = 30.0444;
-  double _lng = 31.2357;
-  String _locationLabel = 'القاهرة (مصر)';
-  bool _usingGps = false;
+  double? _lat;
+  double? _lng;
+  bool _permissionChecked = false;
+  bool _hasLocationPermission = false;
+  bool _gpsAttempted = false;
   bool _fetchingGps = false;
 
   double _declinationDeg = 0.0;
@@ -34,39 +33,63 @@ class _QiblaScreenState extends State<QiblaScreen> {
   int _accuracy = 2; // 0=unreliable, 1=low, 2=medium, 3=high, -1=none
   bool _hasSensor = true;
   bool _wasAligned = false;
-  bool _promptedCalibration = false;
+
+  bool get _hasGpsFix => _lat != null && _lng != null;
+  bool get _hasAccuracyWarning => !_hasSensor || _accuracy <= 1;
+  bool get _canApplyQibla =>
+      _hasLocationPermission && _hasGpsFix && !_hasAccuracyWarning;
 
   @override
   void initState() {
     super.initState();
-    _initLocation();
+    WidgetsBinding.instance.addObserver(this);
+    _checkPermissionAndFetch();
     _startCompassStream();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _compassSub?.cancel();
     super.dispose();
   }
 
-  Future<void> _initLocation() async {
-    final cityKey = await NotificationService.instance.getSelectedCityKey();
-    final city = SunTimesCalculator.getCityByKey(cityKey);
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-check permission and GPS automatically if user returns from App Settings
+    if (state == AppLifecycleState.resumed && (!_hasLocationPermission || !_hasGpsFix)) {
+      _checkPermissionAndFetch(autoRequest: false);
+    }
+  }
+
+  Future<void> _checkPermissionAndFetch({bool autoRequest = true}) async {
+    bool granted = false;
+    try {
+      granted =
+          await _locationChannel.invokeMethod<bool>('hasLocationPermission') ?? false;
+    } catch (_) {
+      granted = false;
+    }
     if (!mounted) return;
     setState(() {
-      _lat = city.lat;
-      _lng = city.lng;
-      _locationLabel = city.nameAr;
-      _usingGps = false;
+      _permissionChecked = true;
+      _hasLocationPermission = granted;
     });
-    await _updateDeclination();
+    if (granted) {
+      await _refreshGpsLocation();
+    } else if (autoRequest) {
+      await _refreshGpsLocation();
+    }
   }
 
   Future<void> _updateDeclination() async {
+    final lat = _lat;
+    final lng = _lng;
+    if (lat == null || lng == null) return;
     try {
       final decl = await _locationChannel.invokeMethod<double>('getDeclination', {
-        'lat': _lat,
-        'lng': _lng,
+        'lat': lat,
+        'lng': lng,
       });
       if (decl != null && mounted) {
         setState(() => _declinationDeg = decl);
@@ -80,41 +103,44 @@ class _QiblaScreenState extends State<QiblaScreen> {
     if (_fetchingGps) return;
     setState(() => _fetchingGps = true);
     try {
-      final res = await _locationChannel.invokeMapMethod<String, dynamic>('getCurrentLocation');
+      final res =
+          await _locationChannel.invokeMapMethod<String, dynamic>('getCurrentLocation');
+      final bool granted =
+          await _locationChannel.invokeMethod<bool>('hasLocationPermission') ?? false;
       if (!mounted) return;
-      if (res != null && res['lat'] != null && res['lng'] != null) {
+
+      if (granted && res != null && res['lat'] != null && res['lng'] != null) {
         setState(() {
+          _permissionChecked = true;
+          _hasLocationPermission = true;
+          _gpsAttempted = true;
           _lat = (res['lat'] as num).toDouble();
           _lng = (res['lng'] as num).toDouble();
-          _locationLabel = 'الموقع الحالي (GPS)';
-          _usingGps = true;
         });
         await _updateDeclination();
-        if (mounted) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              const SnackBar(content: Text('تم تحديد موقعك عبر GPS بدقة عالية')),
-            );
-        }
       } else {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(content: Text('تعذر الحصول على GPS — يمكنك اختيار المدينة يدوياً')),
-          );
+        setState(() {
+          _permissionChecked = true;
+          _hasLocationPermission = granted;
+          _gpsAttempted = true;
+        });
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(content: Text('خدمة الموقع غير متاحة حالياً')),
-          );
+        setState(() {
+          _permissionChecked = true;
+          _gpsAttempted = true;
+        });
       }
     } finally {
       if (mounted) setState(() => _fetchingGps = false);
     }
+  }
+
+  Future<void> _openAppSettings() async {
+    try {
+      await _locationChannel.invokeMethod('openAppSettings');
+    } catch (_) {}
   }
 
   void _startCompassStream() {
@@ -125,34 +151,33 @@ class _QiblaScreenState extends State<QiblaScreen> {
         final heading = (event['heading'] as num?)?.toDouble() ?? 0.0;
         final accuracy = (event['accuracy'] as num?)?.toInt() ?? 2;
 
-        final trueHeading = (heading + _declinationDeg + 360.0) % 360.0;
-        final qiblaBearing = QiblaCalculator.bearingToKaaba(_lat, _lng);
-        final delta = QiblaCalculator.signedDeltaDegrees(trueHeading, qiblaBearing);
-        final alignedNow = hasSensor && delta.abs() <= 3.0;
-
-        if (alignedNow && !_wasAligned) {
-          HapticFeedback.mediumImpact();
+        final bool canApplyNow =
+            _hasLocationPermission && _hasGpsFix && hasSensor && accuracy >= 2;
+        if (canApplyNow) {
+          final trueHeading = (heading + _declinationDeg + 360.0) % 360.0;
+          final qiblaBearing = QiblaCalculator.bearingToKaaba(_lat!, _lng!);
+          final delta = QiblaCalculator.signedDeltaDegrees(trueHeading, qiblaBearing);
+          final alignedNow = delta.abs() <= 3.0;
+          if (alignedNow && !_wasAligned) {
+            HapticFeedback.mediumImpact();
+          }
+          _wasAligned = alignedNow;
+        } else {
+          _wasAligned = false;
         }
-        _wasAligned = alignedNow;
 
         setState(() {
           _hasSensor = hasSensor;
           _magneticHeading = heading;
           _accuracy = accuracy;
         });
-
-        if (hasSensor && accuracy <= 1 && !_promptedCalibration) {
-          _promptedCalibration = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) _showCalibrationSheet();
-          });
-        }
       },
       onError: (_) {
         if (mounted) {
           setState(() {
             _hasSensor = false;
             _accuracy = -1;
+            _wasAligned = false;
           });
         }
       },
@@ -170,86 +195,6 @@ class _QiblaScreenState extends State<QiblaScreen> {
     );
   }
 
-  void _showCityPicker() {
-    final primaryTxt = AppConstants.textPrimary(context);
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppConstants.cardSurface(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.6,
-        maxChildSize: 0.85,
-        minChildSize: 0.4,
-        builder: (_, controller) => Column(
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppConstants.borderColor(context),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'اختر المدينة لحساب القبلة',
-                style: GoogleFonts.ibmPlexSansArabic(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: primaryTxt,
-                ),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: controller,
-                itemCount: SunTimesCalculator.cities.length,
-                itemBuilder: (_, idx) {
-                  final city = SunTimesCalculator.cities[idx];
-                  final selected = !_usingGps && _locationLabel == city.nameAr;
-                  return ListTile(
-                    leading: Icon(
-                      Icons.location_city_outlined,
-                      color: selected ? AppConstants.secondary : AppConstants.textSecondary(context),
-                    ),
-                    title: Text(
-                      city.nameAr,
-                      style: GoogleFonts.ibmPlexSansArabic(
-                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                        color: primaryTxt,
-                      ),
-                    ),
-                    trailing: selected
-                        ? const Icon(Icons.check_circle, color: AppConstants.secondary)
-                        : null,
-                    onTap: () async {
-                      Navigator.pop(ctx);
-                      await NotificationService.instance.setSelectedCityKey(city.key);
-                      if (!mounted) return;
-                      setState(() {
-                        _lat = city.lat;
-                        _lng = city.lng;
-                        _locationLabel = city.nameAr;
-                        _usingGps = false;
-                      });
-                      await _updateDeclination();
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   String _accuracyLabel() {
     switch (_accuracy) {
       case 3:
@@ -257,12 +202,189 @@ class _QiblaScreenState extends State<QiblaScreen> {
       case 2:
         return 'دقة البوصلة: متوسطة';
       case 1:
-        return 'دقة البوصلة: منخفضة — اضغط للمعايرة';
+        return 'دقة البوصلة: منخفضة — يجب المعايرة أولاً';
       case 0:
-        return 'البوصلة تحتاج للمعايرة';
+        return 'دقة البوصلة غير مستقرة — يجب المعايرة أولاً';
       default:
-        return 'لا يوجد مستشعر بوصلة';
+        return 'لا يوجد مستشعر بوصلة في هذا الجهاز';
     }
+  }
+
+  Widget _buildPermissionGate(BuildContext context, Color accentEmerald) {
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppConstants.cardSurface(context),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppConstants.borderColor(context)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppConstants.tertiary.withOpacity(0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.location_off_outlined,
+                  size: 40,
+                  color: AppConstants.tertiary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'صلاحية الموقع مطلوبة لتشغيل القبلة',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: primaryTxt,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'لن يتم تفعيل بوصلة القبلة دون السماح بالوصول إلى الموقع (GPS) لضمان دقة الاتجاه لموقعك الحالي.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: 13,
+                  color: secondaryTxt,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentEmerald,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                  ),
+                  icon: _fetchingGps
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.my_location),
+                  label: const Text(
+                    'السماح بصلاحية الموقع',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: _fetchingGps ? null : _refreshGpsLocation,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryTxt,
+                    side: BorderSide(color: AppConstants.borderColor(context)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.settings_outlined, size: 18),
+                  label: const Text('فتح إعدادات التطبيق'),
+                  onPressed: _openAppSettings,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGpsRequiredGate(BuildContext context, Color accentEmerald) {
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppConstants.cardSurface(context),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppConstants.borderColor(context)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppConstants.activeSurface(context),
+                  shape: BoxShape.circle,
+                ),
+                child: _fetchingGps
+                    ? CircularProgressIndicator(strokeWidth: 2.5, color: accentEmerald)
+                    : const Icon(
+                        Icons.gps_off,
+                        size: 38,
+                        color: AppConstants.tertiary,
+                      ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _fetchingGps
+                    ? 'جاري تحديد موقعك بدقة...'
+                    : 'تعذر قراءة الموقع من GPS',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: primaryTxt,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _fetchingGps
+                    ? 'يرجى الانتظار لحظات حتى يتم تحديد إحداثياتك.'
+                    : 'تأكد من تفعيل خدمة الموقع (GPS) على الهاتف ثم اضغط على إعادة المحاولة.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.ibmPlexSansArabic(
+                  fontSize: 13,
+                  color: secondaryTxt,
+                  height: 1.5,
+                ),
+              ),
+              if (!_fetchingGps && _gpsAttempted) ...[
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accentEmerald,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                    ),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text(
+                      'إعادة محاولة تحديد الموقع',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: _refreshGpsLocation,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -270,189 +392,166 @@ class _QiblaScreenState extends State<QiblaScreen> {
     final isDark = AppConstants.isDark(context);
     final primaryTxt = AppConstants.textPrimary(context);
     final secondaryTxt = AppConstants.textSecondary(context);
-
-    final qiblaBearing = QiblaCalculator.bearingToKaaba(_lat, _lng);
-    final distanceKm = QiblaCalculator.distanceToKaabaKm(_lat, _lng);
-    final trueHeading = (_magneticHeading + _declinationDeg + 360.0) % 360.0;
-    final delta = QiblaCalculator.signedDeltaDegrees(trueHeading, qiblaBearing);
-    final isAligned = _hasSensor && delta.abs() <= 3.0;
     final accentEmerald = isDark ? const Color(0xFF10B981) : AppConstants.secondary;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'اتجاه القبلة',
-          style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: _fetchingGps
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.my_location),
-            tooltip: 'تحديد موقعي عبر GPS',
-            onPressed: _fetchingGps ? null : _refreshGpsLocation,
-          ),
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            tooltip: 'معايرة البوصلة',
-            onPressed: _showCalibrationSheet,
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            // 1. Stylized Trajectory & Metrics Card
-            Container(
-              decoration: BoxDecoration(
-                color: AppConstants.cardSurface(context),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppConstants.borderColor(context)),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 132,
-                    width: double.infinity,
-                    child: Stack(
-                      children: [
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: _TrajectoryMapPainter(
-                              isDark: isDark,
-                              accentColor: accentEmerald,
-                              bearingDeg: qiblaBearing,
-                            ),
+    Widget bodyContent;
+    if (!_permissionChecked || (_fetchingGps && !_hasLocationPermission)) {
+      bodyContent = const Center(child: CircularProgressIndicator());
+    } else if (!_hasLocationPermission) {
+      bodyContent = _buildPermissionGate(context, accentEmerald);
+    } else if (!_hasGpsFix) {
+      bodyContent = _buildGpsRequiredGate(context, accentEmerald);
+    } else {
+      final qiblaBearing = QiblaCalculator.bearingToKaaba(_lat!, _lng!);
+      final distanceKm = QiblaCalculator.distanceToKaabaKm(_lat!, _lng!);
+      final trueHeading = (_magneticHeading + _declinationDeg + 360.0) % 360.0;
+      final delta = QiblaCalculator.signedDeltaDegrees(trueHeading, qiblaBearing);
+      final isAligned = _canApplyQibla && delta.abs() <= 3.0;
+
+      bodyContent = ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          // 1. Stylized Trajectory & Metrics Card
+          Container(
+            decoration: BoxDecoration(
+              color: AppConstants.cardSurface(context),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppConstants.borderColor(context)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 132,
+                  width: double.infinity,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: _TrajectoryMapPainter(
+                            isDark: isDark,
+                            accentColor: accentEmerald,
+                            bearingDeg: qiblaBearing,
                           ),
                         ),
-                        Positioned(
-                          top: 10,
-                          right: 10,
-                          child: InkWell(
-                            onTap: _showCityPicker,
+                      ),
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: (isDark ? Colors.black : Colors.white).withOpacity(0.75),
                             borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: (isDark ? Colors.black : Colors.white).withOpacity(0.75),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppConstants.borderColor(context)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    _usingGps ? Icons.gps_fixed : Icons.location_on,
-                                    size: 14,
-                                    color: accentEmerald,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    _locationLabel,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                      color: primaryTxt,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 2),
-                                  Icon(Icons.keyboard_arrow_down, size: 14, color: secondaryTxt),
-                                ],
-                              ),
-                            ),
+                            border: Border.all(color: AppConstants.borderColor(context)),
                           ),
-                        ),
-                        Positioned(
-                          top: 10,
-                          left: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: (isDark ? Colors.black : Colors.white).withOpacity(0.75),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppConstants.borderColor(context)),
-                            ),
-                            child: Text(
-                              'الكعبة المشرفة',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? const Color(0xFFD4AF37) : AppConstants.primary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(height: 1, color: AppConstants.borderColor(context)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
+                              Icon(Icons.gps_fixed, size: 14, color: accentEmerald),
+                              const SizedBox(width: 5),
                               Text(
-                                '${distanceKm.toStringAsFixed(1)} كم',
-                                style: GoogleFonts.ibmPlexSansArabic(
-                                  fontSize: 17,
+                                'الموقع الحالي (GPS)',
+                                style: TextStyle(
+                                  fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                   color: primaryTxt,
                                 ),
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'المسافة إلى الكعبة',
-                                style: TextStyle(fontSize: 11, color: secondaryTxt),
-                              ),
                             ],
                           ),
                         ),
-                        Container(
-                          width: 1,
-                          height: 32,
-                          color: AppConstants.borderColor(context),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${qiblaBearing.round()}°',
-                                style: GoogleFonts.ibmPlexSansArabic(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: accentEmerald,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'زاوية القبلة من الشمال',
-                                style: TextStyle(fontSize: 11, color: secondaryTxt),
-                              ),
-                            ],
+                      ),
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: (isDark ? Colors.black : Colors.white).withOpacity(0.75),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppConstants.borderColor(context)),
+                          ),
+                          child: Text(
+                            'الكعبة المشرفة',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? const Color(0xFFD4AF37) : AppConstants.primary,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Divider(height: 1, color: AppConstants.borderColor(context)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${distanceKm.toStringAsFixed(1)} كم',
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: primaryTxt,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'المسافة إلى الكعبة',
+                              style: TextStyle(fontSize: 11, color: secondaryTxt),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 32,
+                        color: AppConstants.borderColor(context),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _canApplyQibla ? '${qiblaBearing.round()}°' : '--°',
+                              style: GoogleFonts.ibmPlexSansArabic(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: _canApplyQibla ? accentEmerald : AppConstants.tertiary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'زاوية القبلة من الشمال',
+                              style: TextStyle(fontSize: 11, color: secondaryTxt),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
+          ),
 
-            const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
-            // 2. Fixed Target Pointer + Rotating Compass Dial
+          // 2. Accuracy Warning Guard OR Live Compass
+          if (_hasAccuracyWarning)
+            _CalibrationInlineCard(
+              hasSensor: _hasSensor,
+              accuracyLabel: _accuracyLabel(),
+            )
+          else ...[
             Center(
               child: Column(
                 children: [
@@ -480,13 +579,11 @@ class _QiblaScreenState extends State<QiblaScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          !_hasSensor
-                              ? 'زاوية القبلة المحسوبة: ${qiblaBearing.round()}° من الشمال'
-                              : isAligned
-                                  ? 'أنت متجه نحو القبلة الآن'
-                                  : (delta >= 0
-                                      ? 'دُر لليمين ${delta.abs().round()}°'
-                                      : 'دُر لليسار ${delta.abs().round()}°'),
+                          isAligned
+                              ? 'أنت متجه نحو القبلة الآن'
+                              : (delta >= 0
+                                  ? 'دُر لليمين ${delta.abs().round()}°'
+                                  : 'دُر لليسار ${delta.abs().round()}°'),
                           style: GoogleFonts.ibmPlexSansArabic(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -507,7 +604,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                     height: 290,
                     child: CustomPaint(
                       painter: _CompassDialPainter(
-                        headingDeg: _hasSensor ? trueHeading : 0.0,
+                        headingDeg: trueHeading,
                         qiblaBearingDeg: qiblaBearing,
                         isDark: isDark,
                         isAligned: isAligned,
@@ -530,18 +627,14 @@ class _QiblaScreenState extends State<QiblaScreen> {
                 decoration: BoxDecoration(
                   color: AppConstants.cardSurface(context),
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: _accuracy <= 1
-                        ? AppConstants.tertiary.withOpacity(0.6)
-                        : AppConstants.borderColor(context),
-                  ),
+                  border: Border.all(color: AppConstants.borderColor(context)),
                 ),
                 child: Row(
                   children: [
                     Icon(
-                      _accuracy <= 1 ? Icons.warning_amber_rounded : Icons.explore_outlined,
+                      Icons.explore_outlined,
                       size: 18,
-                      color: _accuracy <= 1 ? AppConstants.tertiary : accentEmerald,
+                      color: accentEmerald,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -556,11 +649,10 @@ class _QiblaScreenState extends State<QiblaScreen> {
                               color: primaryTxt,
                             ),
                           ),
-                          if (_hasSensor)
-                            Text(
-                              'اتجاه الهاتف الحالي: ${trueHeading.round()}° • اضغط لمعايرة البوصلة',
-                              style: TextStyle(fontSize: 11, color: secondaryTxt),
-                            ),
+                          Text(
+                            'اتجاه الهاتف الحالي: ${trueHeading.round()}° • اضغط لعرض طريقة المعايرة',
+                            style: TextStyle(fontSize: 11, color: secondaryTxt),
+                          ),
                         ],
                       ),
                     ),
@@ -570,7 +662,165 @@ class _QiblaScreenState extends State<QiblaScreen> {
               ),
             ),
           ],
+        ],
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'اتجاه القبلة',
+          style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18),
         ),
+        centerTitle: true,
+        actions: [
+          if (_hasLocationPermission)
+            IconButton(
+              icon: _fetchingGps
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location),
+              tooltip: 'تحديث الموقع عبر GPS',
+              onPressed: _fetchingGps ? null : _refreshGpsLocation,
+            ),
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: 'معايرة البوصلة',
+            onPressed: _showCalibrationSheet,
+          ),
+        ],
+      ),
+      body: SafeArea(child: bodyContent),
+    );
+  }
+}
+
+class _CalibrationInlineCard extends StatefulWidget {
+  final bool hasSensor;
+  final String accuracyLabel;
+
+  const _CalibrationInlineCard({
+    required this.hasSensor,
+    required this.accuracyLabel,
+  });
+
+  @override
+  State<_CalibrationInlineCard> createState() => _CalibrationInlineCardState();
+}
+
+class _CalibrationInlineCardState extends State<_CalibrationInlineCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2400),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppConstants.isDark(context);
+    final primaryTxt = AppConstants.textPrimary(context);
+    final secondaryTxt = AppConstants.textSecondary(context);
+    final accentColor = isDark ? const Color(0xFF10B981) : AppConstants.secondary;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppConstants.cardSurface(context),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppConstants.tertiary.withOpacity(0.6)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppConstants.tertiary.withOpacity(0.14),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.warning_amber_rounded, size: 16, color: AppConstants.tertiary),
+                const SizedBox(width: 6),
+                Text(
+                  widget.accuracyLabel,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: AppConstants.tertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (widget.hasSensor) ...[
+            SizedBox(
+              width: 180,
+              height: 150,
+              child: AnimatedBuilder(
+                animation: _controller,
+                builder: (_, __) => CustomPaint(
+                  painter: _FigureEightPainter(
+                    progress: _controller.value,
+                    isDark: isDark,
+                    accentColor: accentColor,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'لن يتم عرض اتجاه القبلة أثناء ضعف دقة البوصلة',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: primaryTxt,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'حرّك هاتفك في الهواء على شكل رقم 8 ثلاث مرات بعيداً عن المعادن حتى ترتفع الدقة تلقائياً.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 12,
+                color: secondaryTxt,
+                height: 1.5,
+              ),
+            ),
+          ] else ...[
+            const Icon(Icons.sensors_off, size: 46, color: AppConstants.tertiary),
+            const SizedBox(height: 12),
+            Text(
+              'تعذر تشغيل بوصلة القبلة',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: primaryTxt,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'هذا الجهاز لا يدعم مستشعر البوصلة المغناطيسية اللازم لتحديد الاتجاه بدقة.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.ibmPlexSansArabic(
+                fontSize: 12,
+                color: secondaryTxt,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -599,7 +849,6 @@ class _TrajectoryMapPainter extends CustomPainter {
       ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, bgPaint);
 
-    // Subtle latitude/longitude grid lines
     final gridPaint = Paint()
       ..color = (isDark ? Colors.white : AppConstants.primary).withOpacity(0.06)
       ..strokeWidth = 1;
@@ -610,7 +859,6 @@ class _TrajectoryMapPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    // Place user dot and Kaaba dot meaningfully using bearing vector
     final start = Offset(size.width * 0.72, size.height * 0.34);
     final end = Offset(size.width * 0.28, size.height * 0.74);
     final ctrl = Offset(size.width * 0.48, size.height * 0.42);
@@ -619,7 +867,6 @@ class _TrajectoryMapPainter extends CustomPainter {
       ..moveTo(start.dx, start.dy)
       ..quadraticBezierTo(ctrl.dx, ctrl.dy, end.dx, end.dy);
 
-    // Dashed curved trajectory
     final dashPaint = Paint()
       ..color = accentColor
       ..strokeWidth = 2.4
@@ -637,11 +884,9 @@ class _TrajectoryMapPainter extends CustomPainter {
       }
     }
 
-    // User location marker
     canvas.drawCircle(start, 9, Paint()..color = accentColor.withOpacity(0.22));
     canvas.drawCircle(start, 5, Paint()..color = accentColor);
 
-    // Miniature Kaaba marker at destination
     const kaabaSize = 16.0;
     final rect = Rect.fromCenter(center: end, width: kaabaSize, height: kaabaSize);
     canvas.drawRRect(
@@ -681,7 +926,6 @@ class _CompassDialPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width * 0.44;
 
-    // Outer alignment halo
     if (isAligned) {
       canvas.drawCircle(
         center,
@@ -693,7 +937,6 @@ class _CompassDialPainter extends CustomPainter {
       );
     }
 
-    // Dial base circle
     canvas.drawCircle(
       center,
       radius,
@@ -710,12 +953,10 @@ class _CompassDialPainter extends CustomPainter {
         ..strokeWidth = isAligned ? 2.5 : 1.5,
     );
 
-    // Rotate canvas counter-clockwise by headingDeg so North moves accurately
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(-headingDeg * math.pi / 180.0);
 
-    // Tick marks every 5 degrees
     for (int deg = 0; deg < 360; deg += 5) {
       final isMajor = deg % 30 == 0;
       final isNorth = deg == 0;
@@ -740,7 +981,6 @@ class _CompassDialPainter extends CustomPainter {
       );
     }
 
-    // Cardinal labels (ش / ق / ج / غ)
     const cardinals = {
       0: 'ش',
       90: 'ق',
@@ -768,17 +1008,14 @@ class _CompassDialPainter extends CustomPainter {
 
       canvas.save();
       canvas.translate(pos.dx, pos.dy);
-      // Keep text upright relative to viewer
       canvas.rotate(headingDeg * math.pi / 180.0);
       tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
       canvas.restore();
     }
 
-    // Qibla needle & custom Kaaba emblem anchored at qiblaBearingDeg
     canvas.save();
     canvas.rotate(qiblaBearingDeg * math.pi / 180.0);
 
-    // Subtle south tail
     final tailPath = Path()
       ..moveTo(0, radius * 0.42)
       ..lineTo(-6, 0)
@@ -789,7 +1026,6 @@ class _CompassDialPainter extends CustomPainter {
       Paint()..color = isDark ? Colors.white.withOpacity(0.18) : Colors.black.withOpacity(0.14),
     );
 
-    // Primary Qibla needle pointing toward Kaaba (-Y direction)
     final needlePath = Path()
       ..moveTo(0, -(radius * 0.56))
       ..lineTo(-8, 0)
@@ -797,7 +1033,6 @@ class _CompassDialPainter extends CustomPainter {
       ..close();
     canvas.drawPath(needlePath, Paint()..color = accentColor);
 
-    // Custom Kaaba emblem at rim along Qibla angle
     final kaabaCenter = Offset(0, -(radius - 22));
     const kSize = 24.0;
     final kaabaRect = Rect.fromCenter(center: kaabaCenter, width: kSize, height: kSize);
@@ -812,7 +1047,6 @@ class _CompassDialPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.4,
     );
-    // Gold Kiswah band
     canvas.drawRect(
       Rect.fromLTWH(kaabaRect.left + 1, kaabaRect.top + 5, kaabaRect.width - 2, 3.2),
       Paint()..color = const Color(0xFFD4AF37),
@@ -820,7 +1054,6 @@ class _CompassDialPainter extends CustomPainter {
 
     canvas.restore();
 
-    // Center hub pin
     canvas.drawCircle(
       Offset.zero,
       10,
@@ -926,7 +1159,7 @@ class _CalibrationSheetState extends State<_CalibrationSheet>
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 onPressed: () => Navigator.pop(context),
-                child: const Text('تمت المعايرة', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('إغلاق', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -953,7 +1186,6 @@ class _FigureEightPainter extends CustomPainter {
     final cy = size.height / 2;
     final r = size.height * 0.44;
 
-    // Outer dashed ring
     for (int i = 0; i < 36; i++) {
       final a = (i * 10) * math.pi / 180.0;
       final p1 = Offset(cx + math.cos(a) * (r - 5), cy + math.sin(a) * (r - 5));
@@ -967,7 +1199,6 @@ class _FigureEightPainter extends CustomPainter {
       );
     }
 
-    // Lemniscate figure-8 track
     final loopPath = Path();
     const aScale = 44.0;
     for (int step = 0; step <= 80; step++) {
@@ -993,7 +1224,6 @@ class _FigureEightPainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round,
     );
 
-    // Animated phone moving along figure-8
     final t = progress * 2.0 * math.pi;
     final denom = 1.0 + math.sin(t) * math.sin(t);
     final px = cx + (aScale * math.cos(t)) / denom;

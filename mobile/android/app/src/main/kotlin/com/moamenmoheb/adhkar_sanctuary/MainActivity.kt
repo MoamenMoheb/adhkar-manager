@@ -9,10 +9,12 @@ import android.hardware.GeomagneticField
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -55,6 +57,19 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(messenger, locationChannelName).setMethodCallHandler { call, result ->
             when (call.method) {
+                "hasLocationPermission" -> result.success(hasLocationPermission())
+                "openAppSettings" -> {
+                    try {
+                        val intent = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", packageName, null)
+                        )
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (_: Exception) {
+                        result.success(false)
+                    }
+                }
                 "getDeclination" -> {
                     val lat = (call.argument<Number>("lat") ?: 0.0).toFloat()
                     val lng = (call.argument<Number>("lng") ?: 0.0).toFloat()
