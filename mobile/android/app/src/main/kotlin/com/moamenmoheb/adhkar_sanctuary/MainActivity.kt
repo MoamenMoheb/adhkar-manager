@@ -9,6 +9,9 @@ import android.hardware.GeomagneticField
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -24,10 +27,21 @@ class MainActivity : FlutterActivity() {
     private val channelName = "com.moamenmoheb.adhkar_sanctuary/sticky_prayer"
     private val compassChannelName = "com.moamenmoheb.adhkar_sanctuary/qibla_compass"
     private val locationChannelName = "com.moamenmoheb.adhkar_sanctuary/qibla_location"
+    private val azanOverlayChannelName = "com.moamenmoheb.adhkar_sanctuary/azan_overlay"
+    private val azanPlayerChannelName = "com.moamenmoheb.adhkar_sanctuary/azan_player"
     private val locationPermCode = 9012
 
     private var stickyChannel: MethodChannel? = null
+    private var azanPlayerChannel: MethodChannel? = null
     private var pendingLocationResult: MethodChannel.Result? = null
+    private var pendingLaunchTab: String? = null
+    private var previewPlayer: MediaPlayer? = null
+    private var previewPlayingKey: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        pendingLaunchTab = intent?.getStringExtra("open_tab")
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -46,6 +60,136 @@ class MainActivity : FlutterActivity() {
                 }
                 "stop" -> {
                     PrayerStickyHelper.stopService(this)
+                    result.success(true)
+                }
+                "consumePendingLaunchTab" -> {
+                    val tab = pendingLaunchTab
+                    pendingLaunchTab = null
+                    result.success(tab)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(messenger, azanOverlayChannelName).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "canDrawOverlays" -> result.success(AzanOverlayHelper.canDrawOverlays(this))
+                "requestOverlayPermission" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
+                        try {
+                            val intent = Intent(
+                                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                Uri.fromParts("package", packageName, null)
+                            )
+                            startActivity(intent)
+                        } catch (_: Exception) {
+                        }
+                    }
+                    result.success(true)
+                }
+                "saveAndSchedule" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    val vibrate = call.argument<Boolean>("vibrate") ?: false
+                    val wallpaperKey = call.argument<String>("wallpaperKey") ?: "wall_makkah"
+                    val soundKey = call.argument<String>("soundKey") ?: "azan"
+                    val cityName = call.argument<String>("cityName") ?: ""
+                    val scheduleJson = call.argument<String>("scheduleJson") ?: "[]"
+                    AzanOverlayHelper.saveConfigAndSchedule(
+                        this,
+                        enabled,
+                        vibrate,
+                        wallpaperKey,
+                        soundKey,
+                        cityName,
+                        scheduleJson
+                    )
+                    result.success(true)
+                }
+                "previewOverlay" -> {
+                    stopPreviewAudio()
+                    val prayerName = call.argument<String>("prayerName") ?: "صلاة الفجر"
+                    val prayerTime = call.argument<String>("prayerTime") ?: ""
+                    val cityName = call.argument<String>("cityName") ?: ""
+                    val wallpaperKey = call.argument<String>("wallpaperKey") ?: "wall_makkah"
+                    val soundKey = call.argument<String>("soundKey") ?: "azan"
+                    val vibrate = call.argument<Boolean>("vibrate") ?: false
+                    startActivity(
+                        AzanOverlayActivity.buildLaunchIntent(
+                            context = this,
+                            prayerName = prayerName,
+                            prayerTime = prayerTime,
+                            cityName = cityName,
+                            wallpaperKey = wallpaperKey,
+                            soundKey = soundKey,
+                            vibrate = vibrate,
+                            isPreview = true
+                        )
+                    )
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        val playerCh = MethodChannel(messenger, azanPlayerChannelName)
+        azanPlayerChannel = playerCh
+        playerCh.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "play" -> {
+                    val key = call.argument<String>("soundKey") ?: "azan"
+                    if (previewPlayer != null && previewPlayingKey == key) {
+                        stopPreviewAudio()
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    stopPreviewAudio()
+                    if (key == "silent") {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    try {
+                        val mp = MediaPlayer()
+                        mp.setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_MEDIA)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build()
+                        )
+                        if (key == "default") {
+                            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                            if (uri == null) {
+                                mp.release()
+                                result.success(false)
+                                return@setMethodCallHandler
+                            }
+                            mp.setDataSource(this, uri)
+                        } else {
+                            val resId = resources.getIdentifier(key, "raw", packageName)
+                                .takeIf { it != 0 } ?: R.raw.azan
+                            val afd = resources.openRawResourceFd(resId)
+                            mp.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                            afd.close()
+                        }
+                        mp.setOnCompletionListener { finished ->
+                            finished.release()
+                            if (previewPlayer === finished) {
+                                previewPlayer = null
+                                previewPlayingKey = null
+                            }
+                            azanPlayerChannel?.invokeMethod("onCompleted", null)
+                        }
+                        mp.prepare()
+                        mp.start()
+                        previewPlayer = mp
+                        previewPlayingKey = key
+                        result.success(true)
+                    } catch (_: Exception) {
+                        stopPreviewAudio()
+                        result.success(false)
+                    }
+                }
+                "stop" -> {
+                    stopPreviewAudio()
                     result.success(true)
                 }
                 else -> result.notImplemented()
@@ -80,6 +224,18 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    private fun stopPreviewAudio() {
+        try {
+            previewPlayer?.let {
+                if (it.isPlaying) it.stop()
+                it.release()
+            }
+        } catch (_: Exception) {
+        }
+        previewPlayer = null
+        previewPlayingKey = null
     }
 
     private fun hasLocationPermission(): Boolean {
@@ -212,8 +368,17 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.getStringExtra("open_tab") == "prayers") {
+        val tab = intent.getStringExtra("open_tab")
+        if (tab == "prayers") {
             stickyChannel?.invokeMethod("openedFromSticky", null)
+        } else if (!tab.isNullOrBlank()) {
+            pendingLaunchTab = tab
+            stickyChannel?.invokeMethod("openTab", tab)
         }
+    }
+
+    override fun onDestroy() {
+        stopPreviewAudio()
+        super.onDestroy()
     }
 }

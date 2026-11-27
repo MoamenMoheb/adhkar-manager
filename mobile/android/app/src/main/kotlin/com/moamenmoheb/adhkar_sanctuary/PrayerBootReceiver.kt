@@ -15,6 +15,9 @@ class PrayerBootReceiver : BroadcastReceiver() {
             if (PrayerStickyHelper.isEnabled(context)) {
                 PrayerStickyHelper.startOrRefreshService(context)
             }
+            if (AzanOverlayHelper.isEnabled(context)) {
+                AzanOverlayHelper.scheduleNextAlarm(context)
+            }
         }
     }
 }

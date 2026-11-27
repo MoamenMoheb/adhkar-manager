@@ -16,6 +16,8 @@ class NotificationService {
 
   static const MethodChannel _stickyChannel =
       MethodChannel('com.moamenmoheb.adhkar_sanctuary/sticky_prayer');
+  static const MethodChannel _overlayChannel =
+      MethodChannel('com.moamenmoheb.adhkar_sanctuary/azan_overlay');
 
   final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
@@ -45,6 +47,9 @@ class NotificationService {
   static const String _prefPrayerSoundMode = 'prayer_sound_mode';
   static const String _prefPrayerMethodKey = 'prayer_method_key';
   static const String _prefHanafiAsr = 'prayer_hanafi_asr';
+  static const String _prefAzanOverlayEnabled = 'azan_overlay_enabled';
+  static const String _prefAzanOverlayVibrate = 'azan_overlay_vibrate';
+  static const String _prefAzanWallpaperKey = 'azan_wallpaper_key';
 
   static const int _ongoingPrayerNotifId = 8888;
   static const String _ongoingChannelId = 'adhkar_ongoing_salah_v2';
@@ -62,6 +67,7 @@ class NotificationService {
   static const String _prayerAzanChannelId = 'adhkar_prayer_azan_v1';
   static const String _prayerTakbeerChannelId = 'adhkar_prayer_takbeer_v1';
   static const String _prayerDefaultChannelId = 'adhkar_prayer_default_v1';
+  static const String _prayerSilentChannelId = 'adhkar_prayer_silent_v1';
   static const String _prayerChannelName = 'مواقيت الصلاة والأذان';
   static const String _prayerChannelDesc = 'تنبيهات الصلوات الخمس والشروق بصوت الأذان أو الإشعارات';
 
@@ -69,7 +75,7 @@ class NotificationService {
     if (_initialized) return;
     tz_data.initializeTimeZones();
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_notif_logo');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -102,12 +108,26 @@ class NotificationService {
     _stickyChannel.setMethodCallHandler((call) async {
       if (call.method == 'openedFromSticky') {
         _tapStreamController.add('open:prayers');
+      } else if (call.method == 'openTab') {
+        final tab = call.arguments?.toString();
+        if (tab != null && tab.isNotEmpty) {
+          _tapStreamController.add('open:$tab');
+        }
       }
     });
 
     _initialized = true;
     fixedPrayerNotifNotifier.value = await isFixedPrayerNotifEnabled();
     await scheduleAllReminders();
+  }
+
+  Future<String?> consumeInitialNativeTab() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+    try {
+      return await _stickyChannel.invokeMethod<String>('consumePendingLaunchTab');
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<bool> requestPermissions() async {
@@ -182,6 +202,84 @@ class NotificationService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefPrayerSoundMode, mode);
     await scheduleAllReminders();
+  }
+
+  Future<bool> isAzanOverlayEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_prefAzanOverlayEnabled) ?? false;
+  }
+
+  Future<void> setAzanOverlayEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefAzanOverlayEnabled, enabled);
+    await scheduleAllReminders();
+  }
+
+  Future<bool> isAzanOverlayVibrate() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_prefAzanOverlayVibrate) ?? false;
+  }
+
+  Future<void> setAzanOverlayVibrate(bool vibrate) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefAzanOverlayVibrate, vibrate);
+    await scheduleAllReminders();
+  }
+
+  Future<String> getAzanWallpaperKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_prefAzanWallpaperKey) ?? 'wall_makkah';
+  }
+
+  Future<void> setAzanWallpaperKey(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefAzanWallpaperKey, key);
+    await scheduleAllReminders();
+  }
+
+  Future<bool> canDrawOverlays() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return false;
+    try {
+      return await _overlayChannel.invokeMethod<bool>('canDrawOverlays') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> requestOverlayPermission() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      await _overlayChannel.invokeMethod('requestOverlayPermission');
+    } catch (_) {}
+  }
+
+  Future<void> previewAzanOverlay({
+    String prayerName = 'صلاة الفجر',
+    String? prayerTime,
+    String? cityName,
+  }) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    final city = SunTimesCalculator.getCityByKey(await getSelectedCityKey());
+    final method = PrayerTimesCalculator.getMethodByKey(await getPrayerMethodKey(), cityKey: city.key);
+    final hanafi = await isHanafiAsr();
+    final nextPrayer = PrayerTimesCalculator.getNextPrayer(
+      now: DateTime.now(),
+      city: city,
+      method: method,
+      hanafiAsr: hanafi,
+    );
+    try {
+      await _overlayChannel.invokeMethod('previewOverlay', {
+        'prayerName': nextPrayer.isFardPrayer ? 'صلاة ${nextPrayer.nameAr}' : prayerName,
+        'prayerTime': prayerTime ?? _fmtTime12(nextPrayer.time),
+        'cityName': cityName ?? city.nameAr,
+        'wallpaperKey': await getAzanWallpaperKey(),
+        'soundKey': await getPrayerSoundMode(),
+        'vibrate': await isAzanOverlayVibrate(),
+      });
+    } catch (e) {
+      debugPrint('Preview azan overlay notice: $e');
+    }
   }
 
   Future<String?> getPrayerMethodKey() async {
@@ -264,15 +362,16 @@ class NotificationService {
   Future<void> scheduleFastingReminders() => scheduleAllReminders();
 
   String _prayerChannelForMode(String mode) {
+    if (mode == 'silent') return _prayerSilentChannelId;
+    if (mode == 'default') return _prayerDefaultChannelId;
     if (mode == 'azan') return _prayerAzanChannelId;
     if (mode == 'takbeer') return _prayerTakbeerChannelId;
-    return _prayerDefaultChannelId;
+    return 'adhkar_prayer_${mode}_v1';
   }
 
   AndroidNotificationSound? _prayerSoundForMode(String mode) {
-    if (mode == 'azan') return const RawResourceAndroidNotificationSound('azan');
-    if (mode == 'takbeer') return const RawResourceAndroidNotificationSound('takbeer');
-    return null;
+    if (mode == 'silent' || mode == 'default') return null;
+    return RawResourceAndroidNotificationSound(mode);
   }
 
   String _fmtTime12(DateTime dt) {
@@ -406,6 +505,13 @@ class NotificationService {
       int adhkarNotifId = 2000;
       int prayerNotifId = 3000;
 
+      final bool overlayEnabled = await isAzanOverlayEnabled();
+      final bool hasOverlayPerm = await canDrawOverlays();
+      final bool overlayActive = overlayEnabled && hasOverlayPerm;
+      final bool overlayVibrate = await isAzanOverlayVibrate();
+      final String wallpaperKey = await getAzanWallpaperKey();
+      final List<Map<String, dynamic>> overlaySchedule = [];
+
       // 1. Schedule 5 Prayers + Sunrise for the next 10 days
       final Map<String, bool> prayerFlags = {
         'fajr': await isPrayerNotifEnabled('fajr'),
@@ -429,12 +535,27 @@ class NotificationService {
           if (prayerFlags[entry.key] != true) continue;
           if (!entry.time.isAfter(now)) continue;
 
-          final effectiveMode = entry.key == 'sunrise' && soundMode == 'azan' ? 'takbeer' : soundMode;
+          final String time12 = _fmtTime12(entry.time);
+          if (entry.isFardPrayer) {
+            overlaySchedule.add({
+              'key': entry.key,
+              'title': 'صلاة ${entry.nameAr}',
+              'body': time12,
+              'timeMs': entry.time.millisecondsSinceEpoch,
+            });
+          }
+
+          final String rawMode =
+              entry.key == 'sunrise' && soundMode != 'silent' && soundMode != 'default'
+                  ? 'takbeer'
+                  : soundMode;
+          final String effectiveMode =
+              (entry.isFardPrayer && overlayActive) ? 'silent' : rawMode;
           final title = entry.isFardPrayer
               ? 'حان الآن موعد صلاة ${entry.nameAr}'
               : 'حان الآن وقت الشروق (${city.nameAr})';
           final body = entry.isFardPrayer
-              ? 'حيّ على الصلاة، حيّ على الفلاح • ${_fmtTime12(entry.time)}'
+              ? 'حيّ على الصلاة، حيّ على الفلاح • $time12'
               : 'انتهى وقت الفجر وأشرقت الشمس';
 
           await _scheduleOne(
@@ -446,8 +567,24 @@ class NotificationService {
             channelName: _prayerChannelName,
             channelDesc: _prayerChannelDesc,
             androidSound: _prayerSoundForMode(effectiveMode),
+            playSound: effectiveMode != 'silent',
             payload: 'prayer:${entry.key}',
           );
+        }
+      }
+
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          await _overlayChannel.invokeMethod('saveAndSchedule', {
+            'enabled': overlayEnabled,
+            'vibrate': overlayVibrate,
+            'wallpaperKey': wallpaperKey,
+            'soundKey': soundMode,
+            'cityName': city.nameAr,
+            'scheduleJson': jsonEncode(overlaySchedule),
+          });
+        } catch (e) {
+          debugPrint('Azan overlay schedule sync notice: $e');
         }
       }
 
@@ -558,6 +695,7 @@ class NotificationService {
     required String channelName,
     required String channelDesc,
     AndroidNotificationSound? androidSound,
+    bool playSound = true,
     String? payload,
   }) async {
     final utcTarget = scheduledLocal.toUtc();
@@ -577,9 +715,9 @@ class NotificationService {
         channelDescription: channelDesc,
         importance: Importance.high,
         priority: Priority.high,
-        playSound: true,
-        sound: androidSound,
-        icon: '@mipmap/ic_launcher',
+        playSound: playSound,
+        sound: playSound ? androidSound : null,
+        icon: '@drawable/ic_notif_logo',
       ),
       iOS: const DarwinNotificationDetails(),
     );

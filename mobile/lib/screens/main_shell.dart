@@ -6,6 +6,7 @@ import 'adhkar_library_screen.dart';
 import 'misbaha_screen.dart';
 import 'leaderboard_screen.dart';
 import 'profile_screen.dart';
+import 'qibla_screen.dart';
 import '../core/constants/constants.dart';
 import '../main.dart';
 import '../services/notification_service.dart';
@@ -45,6 +46,11 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       if (initial != null && initial.isNotEmpty) {
         NotificationService.instance.initialLaunchPayload = null;
         _handleNotificationPayload(initial);
+      } else {
+        final nativeTab = await NotificationService.instance.consumeInitialNativeTab();
+        if (nativeTab != null && nativeTab.isNotEmpty) {
+          _handleNotificationPayload('open:$nativeTab');
+        }
       }
       await NotificationService.instance.requestPermissions();
       await NotificationService.instance.updateOngoingPrayerNotification();
@@ -80,14 +86,18 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
       });
     } else if (payload == 'open:prayers') {
       setState(() => _currentIndex = 1);
+    } else if (payload == 'open:qibla') {
+      setState(() => _currentIndex = 1);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const QiblaScreen()),
+      );
     } else if (payload.startsWith('prayer:')) {
       final key = payload.substring('prayer:'.length);
       setState(() => _currentIndex = 1);
       final mode = await NotificationService.instance.getPrayerSoundMode();
-      if (key != 'sunrise' && mode == 'azan') {
-        await AzanAudioService.instance.playAzan(shortTakbeer: false);
-      } else if (mode == 'takbeer') {
-        await AzanAudioService.instance.playAzan(shortTakbeer: true);
+      if (key != 'sunrise' && mode != 'silent' && mode != 'default') {
+        await AzanAudioService.instance.playSoundKey(mode);
       }
     }
   }

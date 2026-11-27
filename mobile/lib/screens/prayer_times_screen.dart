@@ -7,6 +7,7 @@ import '../core/utils/sun_times.dart';
 import '../core/utils/prayer_times.dart';
 import '../services/azan_audio_service.dart';
 import '../services/notification_service.dart';
+import 'azan_settings_screen.dart';
 import 'qibla_screen.dart';
 
 class PrayerTimesScreen extends StatefulWidget {
@@ -217,10 +218,13 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                         ),
                         icon: Icon(playing ? Icons.stop_circle : Icons.volume_up),
                         label: Text(
-                          playing ? 'إيقاف صوت الأذان' : 'تشغيل أذان الحرم المكي',
+                          playing ? 'إيقاف صوت الأذان' : 'تشغيل الأذان المختار',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
-                        onPressed: () => _audio.playAzan(shortTakbeer: false),
+                        onPressed: () {
+                          final track = _soundMode == 'silent' || _soundMode == 'default' ? 'azan' : _soundMode;
+                          _audio.playSoundKey(track);
+                        },
                       ),
                     );
                   },
@@ -432,62 +436,77 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
 
                   const Divider(height: 20),
 
-                  Text('صوت تنبيه دخول وقت الصلاة:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt)),
-                  const SizedBox(height: 6),
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('صوت الأذان الكامل (أذان الحرم المكي)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
-                    value: 'azan',
-                    groupValue: _soundMode,
-                    activeColor: primaryTxt,
-                    onChanged: (val) async {
-                      if (val != null) {
-                        await _notif.setPrayerSoundMode(val);
-                        setState(() => _soundMode = val);
-                      }
+                  Text('صوت وشاشة الأذان الكاملة:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt)),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AzanSettingsScreen()),
+                      );
+                      await _loadPrefs();
                     },
-                  ),
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('تكبيرة الأذان المختصرة (١٠ ثوانٍ)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
-                    value: 'takbeer',
-                    groupValue: _soundMode,
-                    activeColor: primaryTxt,
-                    onChanged: (val) async {
-                      if (val != null) {
-                        await _notif.setPrayerSoundMode(val);
-                        setState(() => _soundMode = val);
-                      }
-                    },
-                  ),
-                  RadioListTile<String>(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('نغمة الإشعارات الافتراضية للهاتف', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
-                    value: 'default',
-                    groupValue: _soundMode,
-                    activeColor: primaryTxt,
-                    onChanged: (val) async {
-                      if (val != null) {
-                        await _notif.setPrayerSoundMode(val);
-                        setState(() => _soundMode = val);
-                      }
-                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppConstants.activeSurface(context),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppConstants.borderColor(context)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.tune, color: AppConstants.secondary, size: 22),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'تخصيص صوت المؤذن وشاشة الأذان',
+                                  style: GoogleFonts.ibmPlexSansArabic(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: primaryTxt,
+                                  ),
+                                ),
+                                Text(
+                                  'المؤذن المختار: ${AzanAudioService.findTrack(_soundMode).titleAr}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 11, color: secondaryTxt),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: secondaryTxt),
+                        ],
+                      ),
+                    ),
                   ),
 
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.play_arrow, size: 18),
-                      label: const Text('معاينة الصوت', style: TextStyle(fontSize: 12)),
-                      onPressed: () {
-                        if (_soundMode == 'takbeer') {
-                          _audio.playAzan(shortTakbeer: true);
-                        } else {
-                          _audio.playAzan(shortTakbeer: false);
-                        }
-                      },
-                    ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.play_arrow, size: 18),
+                          label: const Text('معاينة الصوت', style: TextStyle(fontSize: 12)),
+                          onPressed: () {
+                            final track = _soundMode == 'silent' || _soundMode == 'default' ? 'azan' : _soundMode;
+                            _audio.playSoundKey(track);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.fullscreen, size: 18),
+                          label: const Text('معاينة الشاشة', style: TextStyle(fontSize: 12)),
+                          onPressed: () => _notif.previewAzanOverlay(),
+                        ),
+                      ),
+                    ],
                   ),
 
                   const Divider(height: 28),
