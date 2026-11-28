@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
+import '../core/utils/app_locale.dart';
 import '../core/utils/sun_times.dart';
 import '../services/azan_audio_service.dart';
 import '../services/notification_service.dart';
@@ -108,11 +109,13 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
     final primaryTxt = AppConstants.textPrimary(context);
     final secondaryTxt = AppConstants.textSecondary(context);
     final accentEmerald = isDark ? const Color(0xFF10B981) : AppConstants.secondary;
+    final isAr = AppLocale.instance.isAr;
+    final tr = AppLocale.instance.tr;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'إعدادات الأذان والشاشة الكاملة',
+          tr('إعدادات الأذان والشاشة الكاملة', 'Azan Screen & Voice Settings'),
           style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 17),
         ),
         centerTitle: true,
@@ -139,7 +142,7 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
                               contentPadding: EdgeInsets.zero,
                               secondary: Icon(Icons.layers_outlined, color: accentEmerald),
                               title: Text(
-                                'عرض شاشة الأذان فوق التطبيقات',
+                                tr('عرض شاشة الأذان فوق التطبيقات', 'Display Azan Over Apps'),
                                 style: GoogleFonts.ibmPlexSansArabic(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -148,10 +151,10 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
                               ),
                               subtitle: Text(
                                 _overlayEnabled && _hasOverlayPerm
-                                    ? 'مفعّل: تظهر شاشة إسلامية كاملة مع القبلة وكتم الصوت وإغلاق'
+                                    ? tr('مفعّل: تظهر شاشة إسلامية كاملة مع القبلة وكتم الصوت وإغلاق', 'Enabled: shows full Islamic screen with Qibla, Mute & Cancel')
                                     : (_hasOverlayPerm
-                                        ? 'معطل: فعّله لظهور شاشة الأذان التلقائية عند دخول الوقت'
-                                        : 'يحتاج إلى منح إذن الظهور فوق التطبيقات الأخرى'),
+                                        ? tr('معطل: فعّله لظهور شاشة الأذان التلقائية عند دخول الوقت', 'Disabled: enable to show full-screen Azan at prayer time')
+                                        : tr('يحتاج إلى منح إذن الظهور فوق التطبيقات الأخرى', 'Requires Display Over Other Apps permission')),
                                 style: TextStyle(fontSize: 11, color: secondaryTxt),
                               ),
                               value: _overlayEnabled && _hasOverlayPerm,
@@ -165,7 +168,7 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
                                 child: OutlinedButton.icon(
                                   icon: Icon(Icons.open_in_new, size: 16, color: accentEmerald),
                                   label: Text(
-                                    'منح إذن الظهور فوق التطبيقات',
+                                    tr('منح إذن الظهور فوق التطبيقات', 'Grant Display Over Apps Permission'),
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
@@ -181,7 +184,7 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
                               contentPadding: EdgeInsets.zero,
                               secondary: Icon(Icons.vibration, color: primaryTxt),
                               title: Text(
-                                'الاهتزاز مع الأذان',
+                                tr('الاهتزاز مع الأذان', 'Vibrate with Azan'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
@@ -203,7 +206,7 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
 
                       // 2. Islamic Wall Backgrounds Picker
                       Text(
-                        'خلفيات شاشة الأذان',
+                        tr('خلفيات شاشة الأذان', 'Azan Wall Backgrounds'),
                         style: GoogleFonts.ibmPlexSansArabic(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -268,7 +271,7 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
                                     ),
                                     const SizedBox(height: 5),
                                     Text(
-                                      wall.titleAr,
+                                      wall.localizedTitle(isAr),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
@@ -289,7 +292,7 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
 
                       // 3. Azan Sounds & Muezzins
                       Text(
-                        'أصوات الأذان والمؤذنين',
+                        tr('أصوات الأذان والمؤذنين', 'Azan Voices & Sounds'),
                         style: GoogleFonts.ibmPlexSansArabic(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -333,7 +336,7 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
                                     color: selected ? accentEmerald : secondaryTxt,
                                   ),
                                   title: Text(
-                                    track.titleAr,
+                                    track.localizedTitle(isAr),
                                     style: GoogleFonts.ibmPlexSansArabic(
                                       fontSize: 13,
                                       fontWeight: selected ? FontWeight.bold : FontWeight.w600,
@@ -341,7 +344,7 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
                                     ),
                                   ),
                                   subtitle: Text(
-                                    track.subtitleAr,
+                                    track.localizedSubtitle(isAr),
                                     style: TextStyle(fontSize: 11, color: secondaryTxt),
                                   ),
                                   trailing: Row(
@@ -399,7 +402,7 @@ class _AzanSettingsScreenState extends State<AzanSettingsScreen> with WidgetsBin
                         ),
                         icon: const Icon(Icons.fullscreen),
                         label: Text(
-                          'معاينة شاشة الأذان الآن',
+                          tr('معاينة شاشة الأذان الآن', 'Preview Azan Screen'),
                           style: GoogleFonts.ibmPlexSansArabic(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,

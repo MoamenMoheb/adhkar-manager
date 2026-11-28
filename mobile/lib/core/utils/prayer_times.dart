@@ -4,6 +4,7 @@ import 'sun_times.dart';
 class PrayerMethod {
   final String key;
   final String nameAr;
+  final String nameEn;
   final double fajrAngle;
   final double ishaAngle;
   final int? ishaMinutesAfterMaghrib;
@@ -11,24 +12,31 @@ class PrayerMethod {
   const PrayerMethod({
     required this.key,
     required this.nameAr,
+    required this.nameEn,
     required this.fajrAngle,
     this.ishaAngle = 17.5,
     this.ishaMinutesAfterMaghrib,
   });
+
+  String localizedName(bool isAr) => isAr ? nameAr : nameEn;
 }
 
 class PrayerEntry {
   final String key; // 'fajr', 'sunrise', 'dhuhr', 'asr', 'maghrib', 'isha'
   final String nameAr;
+  final String nameEn;
   final DateTime time;
   final bool isFardPrayer;
 
   const PrayerEntry({
     required this.key,
     required this.nameAr,
+    required this.nameEn,
     required this.time,
     this.isFardPrayer = true,
   });
+
+  String localizedName(bool isAr) => isAr ? nameAr : nameEn;
 }
 
 class DailyPrayerTimes {
@@ -53,22 +61,52 @@ class DailyPrayerTimes {
   });
 
   List<PrayerEntry> get allEntries => [
-        PrayerEntry(key: 'fajr', nameAr: 'الفجر', time: fajr),
-        PrayerEntry(key: 'sunrise', nameAr: 'الشروق', time: sunrise, isFardPrayer: false),
-        PrayerEntry(key: 'dhuhr', nameAr: 'الظهر', time: dhuhr),
-        PrayerEntry(key: 'asr', nameAr: 'العصر', time: asr),
-        PrayerEntry(key: 'maghrib', nameAr: 'المغرب', time: maghrib),
-        PrayerEntry(key: 'isha', nameAr: 'العشاء', time: isha),
+        PrayerEntry(key: 'fajr', nameAr: 'الفجر', nameEn: 'Fajr', time: fajr),
+        PrayerEntry(key: 'sunrise', nameAr: 'الشروق', nameEn: 'Sunrise', time: sunrise, isFardPrayer: false),
+        PrayerEntry(key: 'dhuhr', nameAr: 'الظهر', nameEn: 'Dhuhr', time: dhuhr),
+        PrayerEntry(key: 'asr', nameAr: 'العصر', nameEn: 'Asr', time: asr),
+        PrayerEntry(key: 'maghrib', nameAr: 'المغرب', nameEn: 'Maghrib', time: maghrib),
+        PrayerEntry(key: 'isha', nameAr: 'العشاء', nameEn: 'Isha', time: isha),
       ];
 }
 
 class PrayerTimesCalculator {
   static const List<PrayerMethod> methods = [
-    PrayerMethod(key: 'egypt', nameAr: 'الهيئة المصرية العامة للمساحة', fajrAngle: 19.5, ishaAngle: 17.5),
-    PrayerMethod(key: 'makkah', nameAr: 'تقويم أم القرى (مكة المكرمة)', fajrAngle: 18.5, ishaMinutesAfterMaghrib: 90),
-    PrayerMethod(key: 'mwl', nameAr: 'رابطة العالم الإسلامي', fajrAngle: 18.0, ishaAngle: 17.0),
-    PrayerMethod(key: 'karachi', nameAr: 'جامعة العلوم الإسلامية (كراتشي)', fajrAngle: 18.0, ishaAngle: 18.0),
-    PrayerMethod(key: 'isna', nameAr: 'الجمعية الإسلامية بأمريكا الشمالية', fajrAngle: 15.0, ishaAngle: 15.0),
+    PrayerMethod(
+      key: 'egypt',
+      nameAr: 'الهيئة المصرية العامة للمساحة',
+      nameEn: 'Egyptian General Survey Authority',
+      fajrAngle: 19.5,
+      ishaAngle: 17.5,
+    ),
+    PrayerMethod(
+      key: 'makkah',
+      nameAr: 'تقويم أم القرى (مكة المكرمة)',
+      nameEn: 'Umm Al-Qura (Makkah)',
+      fajrAngle: 18.5,
+      ishaMinutesAfterMaghrib: 90,
+    ),
+    PrayerMethod(
+      key: 'mwl',
+      nameAr: 'رابطة العالم الإسلامي',
+      nameEn: 'Muslim World League (MWL)',
+      fajrAngle: 18.0,
+      ishaAngle: 17.0,
+    ),
+    PrayerMethod(
+      key: 'karachi',
+      nameAr: 'جامعة العلوم الإسلامية (كراتشي)',
+      nameEn: 'Univ. of Islamic Sciences (Karachi)',
+      fajrAngle: 18.0,
+      ishaAngle: 18.0,
+    ),
+    PrayerMethod(
+      key: 'isna',
+      nameAr: 'الجمعية الإسلامية بأمريكا الشمالية',
+      nameEn: 'ISNA (North America)',
+      fajrAngle: 15.0,
+      ishaAngle: 15.0,
+    ),
   ];
 
   static PrayerMethod getMethodByKey(String? key, {String? cityKey}) {

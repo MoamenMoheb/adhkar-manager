@@ -36,11 +36,42 @@ class HijriDate {
     'الأحد',
   ];
 
+  static const List<String> monthNamesEn = [
+    'Muharram',
+    'Safar',
+    "Rabi' al-Awwal",
+    "Rabi' al-Thani",
+    'Jumada al-Ula',
+    'Jumada al-Akhirah',
+    'Rajab',
+    "Sha'ban",
+    'Ramadan',
+    'Shawwal',
+    "Dhu al-Qi'dah",
+    'Dhu al-Hijjah',
+  ];
+
+  static const List<String> weekdayNamesEn = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+
   String get monthName => monthNames[(month - 1).clamp(0, 11)];
   String get weekdayName => weekdayNames[(gregorian.weekday - 1).clamp(0, 6)];
+  String get monthNameEn => monthNamesEn[(month - 1).clamp(0, 11)];
+  String get weekdayNameEn => weekdayNamesEn[(gregorian.weekday - 1).clamp(0, 6)];
 
   String get formattedArabic => '$weekdayName، $day $monthName $year هـ';
   String get shortArabic => '$day $monthName $year هـ';
+  String get formattedEnglish => '$weekdayNameEn, $day $monthNameEn $year AH';
+  String get shortEnglish => '$day $monthNameEn $year AH';
+  String formatted(bool isAr) => isAr ? formattedArabic : formattedEnglish;
+  String shortLabel(bool isAr) => isAr ? shortArabic : shortEnglish;
 
   bool get isMonday => gregorian.weekday == DateTime.monday;
   bool get isThursday => gregorian.weekday == DateTime.thursday;

@@ -293,7 +293,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt),
                           ),
                           subtitle: Text(
-                            '${tr("الصوت الحالي:", "Current:")} ${AzanAudioService.findTrack(_soundMode).titleAr}',
+                            '${tr("الصوت الحالي:", "Current:")} ${AzanAudioService.findTrack(_soundMode).localizedTitle(isAr)}',
                             style: TextStyle(fontSize: 11, color: secondaryTxt),
                           ),
                           trailing: Icon(Icons.chevron_right, color: secondaryTxt),
@@ -388,7 +388,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           ),
                           items: SunTimesCalculator.cities
-                              .map((c) => DropdownMenuItem(value: c.key, child: Text(c.nameAr, style: TextStyle(fontSize: 13, color: primaryTxt))))
+                              .map((c) => DropdownMenuItem(value: c.key, child: Text(c.localizedName(isAr), style: TextStyle(fontSize: 13, color: primaryTxt))))
                               .toList(),
                           onChanged: (val) async {
                             if (val != null) {

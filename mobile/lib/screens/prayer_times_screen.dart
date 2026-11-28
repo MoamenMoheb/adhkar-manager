@@ -75,9 +75,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
   }
 
   String _formatTime(DateTime dt) {
+    final isAr = AppLocale.instance.isAr;
     final h = dt.hour;
     final m = dt.minute.toString().padLeft(2, '0');
-    final period = h >= 12 ? 'م' : 'ص';
+    final period = isAr ? (h >= 12 ? 'م' : 'ص') : (h >= 12 ? 'PM' : 'AM');
     final h12 = h == 0 ? 12 : (h > 12 ? h - 12 : h);
     return '$h12:$m $period';
   }
@@ -132,6 +133,8 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
     final secondaryTxt = AppConstants.textSecondary(context);
     final tr = AppLocale.instance.tr;
 
+    final isAr = AppLocale.instance.isAr;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -161,10 +164,10 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                       children: [
                         const Icon(Icons.location_on, color: Colors.white70, size: 18),
                         const SizedBox(width: 6),
-                        Text(city.nameAr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text(city.localizedName(isAr), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                       ],
                     ),
-                    Text(hijri.shortArabic, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                    Text(hijri.shortLabel(isAr), style: const TextStyle(color: Colors.white70, fontSize: 12)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -172,7 +175,9 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   child: Column(
                     children: [
                       Text(
-                        nextPrayer.isFardPrayer ? 'الصلاة القادمة: ${nextPrayer.nameAr}' : 'الموعد القادم: ${nextPrayer.nameAr}',
+                        nextPrayer.isFardPrayer
+                            ? '${tr("الصلاة القادمة:", "Next Prayer:")} ${nextPrayer.localizedName(isAr)}'
+                            : '${tr("الموعد القادم:", "Next:")} ${nextPrayer.localizedName(isAr)}',
                         style: GoogleFonts.ibmPlexSansArabic(color: Colors.white70, fontSize: 14),
                       ),
                       const SizedBox(height: 4),
@@ -186,7 +191,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                         ),
                       ),
                       Text(
-                        'موعد الأذان: ${_formatTime(nextPrayer.time)}',
+                        '${tr("موعد الأذان:", "Azan at:")} ${_formatTime(nextPrayer.time)}',
                         style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -207,7 +212,9 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                         ),
                         icon: Icon(playing ? Icons.stop_circle : Icons.volume_up),
                         label: Text(
-                          playing ? 'إيقاف صوت الأذان' : 'تشغيل الأذان المختار',
+                          playing
+                              ? tr('إيقاف صوت الأذان', 'Stop Azan')
+                              : tr('تشغيل الأذان المختار', 'Play Selected Azan'),
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         onPressed: () {
@@ -262,7 +269,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                       title: Row(
                         children: [
                           Text(
-                            entry.nameAr,
+                            entry.localizedName(isAr),
                             style: TextStyle(
                               fontWeight: isNext ? FontWeight.bold : FontWeight.w600,
                               fontSize: isNext ? 16 : 15,
@@ -277,7 +284,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                                 color: AppConstants.accentBg(context),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text('التالي', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                              child: Text(tr('التالي', 'Next'), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ],
@@ -300,7 +307,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                               color: isNotifOn ? primaryTxt : secondaryTxt,
                               size: 20,
                             ),
-                            tooltip: isNotifOn ? 'إيقاف التنبيه' : 'تفعيل التنبيه',
+                            tooltip: isNotifOn ? tr('إيقاف التنبيه', 'Mute Alert') : tr('تفعيل التنبيه', 'Enable Alert'),
                             onPressed: () async {
                               await _notif.requestPermissions();
                               await _notif.setPrayerNotifEnabled(entry.key, !isNotifOn);
@@ -357,7 +364,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
 
                   const Divider(height: 20),
 
-                  Text('صوت وشاشة الأذان الكاملة:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt)),
+                  Text(tr('صوت وشاشة الأذان الكاملة:', 'Azan Voice & Wall Screen:'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt)),
                   const SizedBox(height: 8),
                   InkWell(
                     borderRadius: BorderRadius.circular(14),
@@ -384,7 +391,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'تخصيص صوت المؤذن وشاشة الأذان',
+                                  tr('تخصيص صوت المؤذن وشاشة الأذان', 'Customize Muezzin & Azan Screen'),
                                   style: GoogleFonts.ibmPlexSansArabic(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
@@ -392,7 +399,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                                   ),
                                 ),
                                 Text(
-                                  'المؤذن المختار: ${AzanAudioService.findTrack(_soundMode).titleAr}',
+                                  '${tr("المؤذن المختار:", "Selected Voice:")} ${AzanAudioService.findTrack(_soundMode).localizedTitle(isAr)}',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(fontSize: 11, color: secondaryTxt),
@@ -412,7 +419,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.play_arrow, size: 18),
-                          label: const Text('معاينة الصوت', style: TextStyle(fontSize: 12)),
+                          label: Text(tr('معاينة الصوت', 'Preview Sound'), style: const TextStyle(fontSize: 12)),
                           onPressed: () {
                             final track = _soundMode == 'silent' || _soundMode == 'default' ? 'azan' : _soundMode;
                             _audio.playSoundKey(track);
@@ -423,7 +430,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.fullscreen, size: 18),
-                          label: const Text('معاينة الشاشة', style: TextStyle(fontSize: 12)),
+                          label: Text(tr('معاينة الشاشة', 'Preview Screen'), style: const TextStyle(fontSize: 12)),
                           onPressed: () => _notif.previewAzanOverlay(),
                         ),
                       ),
@@ -435,12 +442,12 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   DropdownButtonFormField<String>(
                     value: city.key,
                     decoration: InputDecoration(
-                      labelText: 'المدينة',
+                      labelText: tr('المدينة', 'City'),
                       prefixIcon: const Icon(Icons.location_city),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     items: SunTimesCalculator.cities
-                        .map((c) => DropdownMenuItem(value: c.key, child: Text(c.nameAr, style: TextStyle(fontSize: 13, color: primaryTxt))))
+                        .map((c) => DropdownMenuItem(value: c.key, child: Text(c.localizedName(isAr), style: TextStyle(fontSize: 13, color: primaryTxt))))
                         .toList(),
                     onChanged: (val) async {
                       if (val != null) {
@@ -453,12 +460,12 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   DropdownButtonFormField<String>(
                     value: method.key,
                     decoration: InputDecoration(
-                      labelText: 'طريقة حساب المواقيت',
+                      labelText: tr('طريقة حساب المواقيت', 'Calculation Method'),
                       prefixIcon: const Icon(Icons.calculate_outlined),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     items: PrayerTimesCalculator.methods
-                        .map((m) => DropdownMenuItem(value: m.key, child: Text(m.nameAr, style: TextStyle(fontSize: 12, color: primaryTxt))))
+                        .map((m) => DropdownMenuItem(value: m.key, child: Text(m.localizedName(isAr), style: TextStyle(fontSize: 12, color: primaryTxt))))
                         .toList(),
                     onChanged: (val) async {
                       if (val != null) {
@@ -470,8 +477,8 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
                   const SizedBox(height: 8),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: Text('المذهب الحنفي لصلاة العصر', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
-                    subtitle: Text('افتراضي: مذهب الجمهور (الشافعي والمالكي والحنبلي)', style: TextStyle(fontSize: 11, color: secondaryTxt)),
+                    title: Text(tr('المذهب الحنفي لصلاة العصر', 'Hanafi Asr Calculation'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryTxt)),
+                    subtitle: Text(tr('افتراضي: مذهب الجمهور (الشافعي والمالكي والحنبلي)', "Default: Majority (Shafi'i, Maliki & Hanbali)"), style: TextStyle(fontSize: 11, color: secondaryTxt)),
                     value: _hanafiAsr,
                     onChanged: (val) async {
                       await _notif.setHanafiAsr(val);
