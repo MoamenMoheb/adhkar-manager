@@ -181,7 +181,7 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
           Expanded(
             child: _activeTab == 1
                 ? const LeaderboardScreen(embedded: true)
-                : (_loading
+                : _loading
                     ? const Center(child: CircularProgressIndicator())
                     : RefreshIndicator(
                         onRefresh: _loadStatus,
