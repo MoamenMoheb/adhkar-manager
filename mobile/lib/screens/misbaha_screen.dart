@@ -260,11 +260,11 @@ class MisbahaScreenState extends State<MisbahaScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        modeChip('morning', 'الصباح'),
+                        modeChip('morning', AppLocale.instance.tr('الصباح', 'Morning')),
                         const SizedBox(width: 6),
-                        modeChip('evening', 'المساء'),
+                        modeChip('evening', AppLocale.instance.tr('المساء', 'Evening')),
                         const SizedBox(width: 6),
-                        modeChip('free', 'تسبيح حر'),
+                        modeChip('free', AppLocale.instance.tr('تسبيح حر', 'Free Tasbih')),
                       ],
                     ),
                   ),
@@ -314,13 +314,17 @@ class MisbahaScreenState extends State<MisbahaScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'الذكر ${_currentIndex + 1} من ${_sequenceList.length}',
+                                AppLocale.instance.tr(
+                                  'الذكر ${_currentIndex + 1} من ${_sequenceList.length}',
+                                  'Dhikr ${_currentIndex + 1} of ${_sequenceList.length}',
+                                ),
                                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt),
                               ),
                               if (currentDhikr != null)
                                 Expanded(
                                   child: Text(
                                     currentDhikr.adminTitle,
+                                    textDirection: TextDirection.rtl,
                                     textAlign: TextAlign.left,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(fontSize: 11, color: secondaryTxt),
@@ -358,7 +362,9 @@ class MisbahaScreenState extends State<MisbahaScreen> {
                             Icon(Icons.verified, size: 64, color: primaryTxt),
                             const SizedBox(height: 16),
                             Text(
-                              _mode == 'morning' ? 'أتممت أذكار الصباح كاملة!' : 'أتممت أذكار المساء كاملة!',
+                              _mode == 'morning'
+                                  ? AppLocale.instance.tr('أتممت أذكار الصباح كاملة!', 'Morning Adhkar completed!')
+                                  : AppLocale.instance.tr('أتممت أذكار المساء كاملة!', 'Evening Adhkar completed!'),
                               style: GoogleFonts.ibmPlexSansArabic(fontSize: 20, fontWeight: FontWeight.bold, color: primaryTxt),
                               textAlign: TextAlign.center,
                             ),
@@ -371,14 +377,17 @@ class MisbahaScreenState extends State<MisbahaScreen> {
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
-                                  'تم تسجيل الإتمام في الورد اليومي (+١٥ نقطة)',
+                                  AppLocale.instance.tr('تم تسجيل الإتمام في الورد اليومي (+١٥ نقطة)', 'Recorded in Daily Worship (+15 pts)'),
                                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
                             const SizedBox(height: 12),
                             Text(
-                              'عدد الأذكار: ${_sequenceList.length} • إجمالي التسبيحات: $_totalTaps',
+                              AppLocale.instance.tr(
+                                'عدد الأذكار: ${_sequenceList.length} • إجمالي التسبيحات: $_totalTaps',
+                                'Adhkar count: ${_sequenceList.length} • Total taps: $_totalTaps',
+                              ),
                               style: TextStyle(fontSize: 12, color: secondaryTxt),
                             ),
                             const SizedBox(height: 20),
@@ -389,7 +398,7 @@ class MisbahaScreenState extends State<MisbahaScreen> {
                               ),
                               onPressed: _reset,
                               icon: const Icon(Icons.replay),
-                              label: const Text('إعادة القراءة من البداية'),
+                              label: Text(AppLocale.instance.tr('إعادة القراءة من البداية', 'Restart from beginning')),
                             ),
                           ],
                         ),
@@ -403,6 +412,7 @@ class MisbahaScreenState extends State<MisbahaScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           child: Text(
                             _activeText,
+                            textDirection: TextDirection.rtl,
                             style: GoogleFonts.notoNaskhArabic(
                               fontSize: _activeText.length > 180 ? 18 : 22,
                               fontWeight: FontWeight.bold,
@@ -500,19 +510,19 @@ class MisbahaScreenState extends State<MisbahaScreen> {
                             IconButton(
                               onPressed: _currentIndex > 0 ? _prevDhikr : null,
                               icon: const Icon(Icons.arrow_back_ios),
-                              tooltip: 'الذكر السابق',
+                              tooltip: AppLocale.instance.tr('الذكر السابق', 'Previous Dhikr'),
                             )
                           else
                             const SizedBox(width: 48),
                           Text(
-                            'إجمالي الجلسة: $_totalTaps',
+                            AppLocale.instance.tr('إجمالي الجلسة: $_totalTaps', 'Session total: $_totalTaps'),
                             style: TextStyle(color: secondaryTxt, fontSize: 12, fontWeight: FontWeight.bold),
                           ),
                           if (_mode != 'free')
                             IconButton(
                               onPressed: _nextDhikr,
                               icon: const Icon(Icons.arrow_forward_ios),
-                              tooltip: 'الذكر التالي',
+                              tooltip: AppLocale.instance.tr('الذكر التالي', 'Next Dhikr'),
                             )
                           else
                             const SizedBox(width: 48),

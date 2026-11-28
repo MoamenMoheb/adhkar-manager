@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
+import '../core/utils/app_locale.dart';
 import '../models/models.dart';
 
 /// Compact action buttons for viewing a dhikr's virtue ("الفضل") and hadith
@@ -23,6 +24,7 @@ class DhikrInfoButtons extends StatelessWidget {
 
     final primaryTxt = AppConstants.textPrimary(context);
     final secondaryTxt = AppConstants.textSecondary(context);
+    final tr = AppLocale.instance.tr;
 
     Widget buildBtn({
       required IconData icon,
@@ -55,13 +57,13 @@ class DhikrInfoButtons extends StatelessWidget {
         if (hasVirtue)
           buildBtn(
             icon: Icons.auto_awesome_outlined,
-            label: 'الفضل',
+            label: tr('الفضل', 'Virtue'),
             onTap: () => showDhikrVirtueSheet(context, dhikr),
           ),
         if (hasHadiths)
           buildBtn(
             icon: Icons.menu_book_outlined,
-            label: 'الأحاديث (${dhikr.hadiths.length})',
+            label: tr('الأحاديث (${dhikr.hadiths.length})', 'Hadith (${dhikr.hadiths.length})'),
             onTap: () => showDhikrHadithsSheet(context, dhikr),
           ),
       ],
@@ -72,6 +74,7 @@ class DhikrInfoButtons extends StatelessWidget {
 void showDhikrVirtueSheet(BuildContext context, DhikrModel dhikr) {
   final primaryTxt = AppConstants.textPrimary(context);
   final secondaryTxt = AppConstants.textSecondary(context);
+  final tr = AppLocale.instance.tr;
 
   showModalBottomSheet(
     context: context,
@@ -104,7 +107,9 @@ void showDhikrVirtueSheet(BuildContext context, DhikrModel dhikr) {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    dhikr.adminTitle.isNotEmpty ? 'فضل الذكر • ${dhikr.adminTitle}' : 'فضل الذكر',
+                    dhikr.adminTitle.isNotEmpty
+                        ? '${tr("فضل الذكر", "Virtue of Dhikr")} • ${dhikr.adminTitle}'
+                        : tr('فضل الذكر', 'Virtue of Dhikr'),
                     style: GoogleFonts.ibmPlexSansArabic(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -124,6 +129,8 @@ void showDhikrVirtueSheet(BuildContext context, DhikrModel dhikr) {
               ),
               child: Text(
                 dhikr.virtue,
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.right,
                 style: GoogleFonts.notoNaskhArabic(
                   fontSize: 15,
                   height: 1.8,
@@ -133,10 +140,10 @@ void showDhikrVirtueSheet(BuildContext context, DhikrModel dhikr) {
             ),
             const SizedBox(height: 10),
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerEnd,
               child: TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('إغلاق', style: TextStyle(color: secondaryTxt, fontWeight: FontWeight.bold)),
+                child: Text(tr('إغلاق', 'Close'), style: TextStyle(color: secondaryTxt, fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -149,6 +156,7 @@ void showDhikrVirtueSheet(BuildContext context, DhikrModel dhikr) {
 void showDhikrHadithsSheet(BuildContext context, DhikrModel dhikr) {
   final primaryTxt = AppConstants.textPrimary(context);
   final secondaryTxt = AppConstants.textSecondary(context);
+  final tr = AppLocale.instance.tr;
 
   showModalBottomSheet(
     context: context,
@@ -185,7 +193,10 @@ void showDhikrHadithsSheet(BuildContext context, DhikrModel dhikr) {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'التخريج والأحاديث (${dhikr.hadiths.length})',
+                      tr(
+                        'التخريج والأحاديث (${dhikr.hadiths.length})',
+                        'Hadith & Sources (${dhikr.hadiths.length})',
+                      ),
                       style: GoogleFonts.ibmPlexSansArabic(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -217,6 +228,8 @@ void showDhikrHadithsSheet(BuildContext context, DhikrModel dhikr) {
                         children: [
                           Text(
                             hText,
+                            textDirection: TextDirection.rtl,
+                            textAlign: TextAlign.right,
                             style: GoogleFonts.notoNaskhArabic(
                               fontSize: 14,
                               height: 1.75,
@@ -241,6 +254,7 @@ void showDhikrHadithsSheet(BuildContext context, DhikrModel dhikr) {
                                   ),
                                   child: Text(
                                     label,
+                                    textDirection: TextDirection.rtl,
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -259,10 +273,10 @@ void showDhikrHadithsSheet(BuildContext context, DhikrModel dhikr) {
               ),
               const SizedBox(height: 8),
               Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerEnd,
                 child: TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: Text('إغلاق', style: TextStyle(color: secondaryTxt, fontWeight: FontWeight.bold)),
+                  child: Text(tr('إغلاق', 'Close'), style: TextStyle(color: secondaryTxt, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

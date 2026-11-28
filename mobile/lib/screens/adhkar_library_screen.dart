@@ -22,15 +22,18 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
   bool _loading = true;
   final Map<String, int> _localCounters = {};
 
-  final List<Map<String, String>> _categories = const [
-    {'id': 'all', 'name': 'الكل'},
-    {'id': 'morning_evening', 'name': 'الصباح والمساء'},
-    {'id': 'general', 'name': 'أذكار عامة'},
-    {'id': 'prayer', 'name': 'بعد الصلاة'},
-    {'id': 'sleep', 'name': 'النوم'},
-    {'id': 'quranic', 'name': 'أدعية قرآنية'},
-    {'id': 'travel', 'name': 'السفر'},
-  ];
+  List<Map<String, String>> get _categories {
+    final tr = AppLocale.instance.tr;
+    return [
+      {'id': 'all', 'name': tr('الكل', 'All')},
+      {'id': 'morning_evening', 'name': tr('الصباح والمساء', 'Morning & Evening')},
+      {'id': 'general', 'name': tr('أذكار عامة', 'General Adhkar')},
+      {'id': 'prayer', 'name': tr('بعد الصلاة', 'After Prayer')},
+      {'id': 'sleep', 'name': tr('النوم', 'Sleep')},
+      {'id': 'quranic', 'name': tr('أدعية قرآنية', 'Quranic Duas')},
+      {'id': 'travel', 'name': tr('السفر', 'Travel')},
+    ];
+  }
 
   @override
   void initState() {
@@ -149,7 +152,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                     child: ChoiceChip(
                       label: Center(
                         child: Text(
-                          'الكل',
+                          AppLocale.instance.tr('الكل', 'All'),
                           style: TextStyle(color: _morningEveningSubFilter == 'all' ? Colors.white : secondaryTxt, fontSize: 12),
                         ),
                       ),
@@ -165,7 +168,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                     child: ChoiceChip(
                       label: Center(
                         child: Text(
-                          'الصباح',
+                          AppLocale.instance.tr('الصباح', 'Morning'),
                           style: TextStyle(color: _morningEveningSubFilter == 'morning' ? Colors.white : secondaryTxt, fontSize: 12),
                         ),
                       ),
@@ -181,7 +184,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                     child: ChoiceChip(
                       label: Center(
                         child: Text(
-                          'المساء',
+                          AppLocale.instance.tr('المساء', 'Evening'),
                           style: TextStyle(color: _morningEveningSubFilter == 'evening' ? Colors.white : secondaryTxt, fontSize: 12),
                         ),
                       ),
@@ -203,7 +206,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredList.isEmpty
-                    ? Center(child: Text('لا توجد أذكار مطابقة للبحث', style: TextStyle(color: secondaryTxt)))
+                    ? Center(child: Text(AppLocale.instance.tr('لا توجد أذكار مطابقة للبحث', 'No matching Adhkar found'), style: TextStyle(color: secondaryTxt)))
                     : ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: _filteredList.length,
@@ -234,6 +237,8 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                       Expanded(
                                         child: Text(
                                           item.adminTitle,
+                                          textDirection: TextDirection.rtl,
+                                          textAlign: TextAlign.right,
                                           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: secondaryTxt),
                                         ),
                                       ),
@@ -256,7 +261,9 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                             borderRadius: BorderRadius.circular(10),
                                           ),
                                           child: Text(
-                                            isDone ? 'تم ($currentCount/${item.repeats})' : '$currentCount / ${item.repeats}',
+                                            isDone
+                                                ? AppLocale.instance.tr('تم ($currentCount/${item.repeats})', 'Done ($currentCount/${item.repeats})')
+                                                : '$currentCount / ${item.repeats}',
                                             style: TextStyle(
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
@@ -278,6 +285,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
                                     },
                                     child: Text(
                                       item.text,
+                                      textDirection: TextDirection.rtl,
                                       style: GoogleFonts.notoNaskhArabic(
                                         fontSize: 19,
                                         height: 1.85,
