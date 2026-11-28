@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/constants/constants.dart';
+import 'core/utils/app_locale.dart';
 import 'services/supabase_service.dart';
 import 'services/notification_service.dart';
 import 'screens/main_shell.dart';
@@ -17,6 +18,7 @@ void main() async {
     anonKey: AppConstants.supabaseAnonKey,
   );
 
+  await AppLocale.instance.init();
   await SupabaseService.instance.init();
   await NotificationService.instance.init();
 
@@ -33,12 +35,16 @@ class AdhkarApp extends StatelessWidget {
       displayColor: const Color(0xFFF3F4F6),
     );
 
-    return MaterialApp(
-      navigatorKey: rootNavigatorKey,
-      title: AppConstants.appName,
-      debugShowCheckedModeBanner: false,
-      locale: const Locale('ar'),
-      supportedLocales: const [Locale('ar')],
+    return ListenableBuilder(
+      listenable: AppLocale.instance,
+      builder: (context, _) {
+        final isAr = AppLocale.instance.isAr;
+        return MaterialApp(
+          navigatorKey: rootNavigatorKey,
+          title: isAr ? AppConstants.appName : 'Adhkar Sanctuary',
+          debugShowCheckedModeBanner: false,
+          locale: AppLocale.instance.locale,
+          supportedLocales: const [Locale('ar'), Locale('en')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -119,6 +125,8 @@ class AdhkarApp extends StatelessWidget {
         textTheme: darkTextTheme,
       ),
       home: const MainShell(),
+        );
+      },
     );
   }
 }

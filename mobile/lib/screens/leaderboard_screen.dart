@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
+import '../core/utils/app_locale.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
 import 'friends_screen.dart';
 import 'auth_screen.dart';
 
 class LeaderboardScreen extends StatefulWidget {
-  const LeaderboardScreen({super.key});
+  final bool embedded;
+
+  const LeaderboardScreen({super.key, this.embedded = false});
 
   @override
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
@@ -80,38 +83,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     final primaryTxt = AppConstants.textPrimary(context);
     final secondaryTxt = AppConstants.textSecondary(context);
     final selectedBg = AppConstants.accentBg(context);
+    final tr = AppLocale.instance.tr;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('لوحة المتصدرين', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
-        centerTitle: true,
-        actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.group_add),
-                tooltip: 'إضافة وإدارة الأصدقاء',
-                onPressed: _openFriendsManager,
-              ),
-              if (_pendingRequests.isNotEmpty)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
-                    child: Text(
-                      '${_pendingRequests.length}',
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-      body: Column(
+    final boardBody = Column(
         children: [
           if (_pendingRequests.isNotEmpty)
             Padding(
@@ -132,7 +106,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'لديك ${_pendingRequests.length} طلب صداقة جديد — اضغط للقبول أو الرفض',
+                          tr(
+                            'لديك ${_pendingRequests.length} طلب صداقة جديد — اضغط للقبول أو الرفض',
+                            'You have ${_pendingRequests.length} new friend request(s) — tap to review',
+                          ),
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: primaryTxt),
                         ),
                       ),
@@ -148,7 +125,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               children: [
                 Expanded(
                   child: ChoiceChip(
-                    label: Center(child: Text('أصدقائي', style: TextStyle(color: _onlyFriends ? Colors.white : secondaryTxt, fontWeight: FontWeight.bold))),
+                    label: Center(child: Text(tr('أصدقائي', 'Friends'), style: TextStyle(color: _onlyFriends ? Colors.white : secondaryTxt, fontWeight: FontWeight.bold))),
                     selected: _onlyFriends,
                     selectedColor: selectedBg,
                     backgroundColor: AppConstants.cardSurface(context),
@@ -318,7 +295,41 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       ),
           ),
         ],
+    );
+
+    if (widget.embedded) return boardBody;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(tr('لوحة المتصدرين', 'Leaderboard'), style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
+        centerTitle: true,
+        actions: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.group_add),
+                tooltip: tr('إضافة وإدارة الأصدقاء', 'Manage Friends'),
+                onPressed: _openFriendsManager,
+              ),
+              if (_pendingRequests.isNotEmpty)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+                    child: Text(
+                      '${_pendingRequests.length}',
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
+      body: boardBody,
     );
   }
 }

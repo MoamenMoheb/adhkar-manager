@@ -2,13 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
+import '../core/utils/app_locale.dart';
 import '../core/utils/hijri_calendar.dart';
 import '../core/utils/sun_times.dart';
 import '../core/utils/prayer_times.dart';
 import '../services/azan_audio_service.dart';
 import '../services/notification_service.dart';
 import 'azan_settings_screen.dart';
-import 'qibla_screen.dart';
+import 'notification_settings_screen.dart';
 
 class PrayerTimesScreen extends StatefulWidget {
   const PrayerTimesScreen({super.key});
@@ -27,7 +28,6 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
   String _cityKey = SunTimesCalculator.defaultCityForLocalTimezone().key;
   String? _methodKey;
   bool _hanafiAsr = false;
-  bool _fixedNotifEnabled = true;
   String _soundMode = 'azan';
   int _hijriOffset = 0;
 
@@ -59,7 +59,6 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
     final cityKey = await _notif.getSelectedCityKey();
     final methodKey = await _notif.getPrayerMethodKey();
     final hanafi = await _notif.isHanafiAsr();
-    final fixedNotif = await _notif.isFixedPrayerNotifEnabled();
     final soundMode = await _notif.getPrayerSoundMode();
     final offset = await _notif.getHijriOffset();
     for (final k in _prayerFlags.keys.toList()) {
@@ -70,7 +69,6 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
       _cityKey = cityKey;
       _methodKey = methodKey;
       _hanafiAsr = hanafi;
-      _fixedNotifEnabled = fixedNotif;
       _soundMode = soundMode;
       _hijriOffset = offset;
     });
@@ -132,24 +130,15 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
 
     final primaryTxt = AppConstants.textPrimary(context);
     final secondaryTxt = AppConstants.textSecondary(context);
+    final tr = AppLocale.instance.tr;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('مواقيت الصلاة والأذان', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(
+          tr('مواقيت الصلاة والأذان', 'Prayer Times & Azan'),
+          style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.explore_outlined),
-            tooltip: 'اتجاه القبلة',
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const QiblaScreen()),
-              );
-              await _loadPrefs();
-            },
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -233,62 +222,7 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
             ),
           ),
 
-          const SizedBox(height: 14),
-
-          // Quick Qibla Compass Card
-          InkWell(
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const QiblaScreen()),
-              );
-              await _loadPrefs();
-            },
-            borderRadius: BorderRadius.circular(18),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-              decoration: BoxDecoration(
-                color: AppConstants.cardSurface(context),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppConstants.borderColor(context)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(9),
-                    decoration: BoxDecoration(
-                      color: AppConstants.activeSurface(context),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.explore, color: AppConstants.secondary, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'بوصلة اتجاه القبلة',
-                          style: GoogleFonts.ibmPlexSansArabic(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: primaryTxt,
-                          ),
-                        ),
-                        Text(
-                          'تحديد القبلة بدقة والمسافة إلى الكعبة المشرفة',
-                          style: TextStyle(fontSize: 11, color: secondaryTxt),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right, color: secondaryTxt),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
 
           // 2. All 5 Prayers + Sunrise Cards
           Card(
@@ -397,40 +331,27 @@ class _PrayerTimesScreenState extends State<PrayerTimesScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('إعدادات الأذان والإشعارات', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: primaryTxt)),
+                  Text(tr('إعدادات الأذان والإشعارات', 'Azan & Notification Settings'), style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 16, color: primaryTxt)),
                   const Divider(height: 22),
 
-                  ValueListenableBuilder<bool>(
-                    valueListenable: _notif.fixedPrayerNotifNotifier,
-                    builder: (context, isFixedEnabled, _) {
-                      return SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('إشعار دائم للصلاة القادمة في الشريط', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: primaryTxt)),
-                        subtitle: Text(
-                          isFixedEnabled
-                              ? 'مفعل: ثابت في شريط الإشعارات ويعرض العد التنازلي حتى الإيقاف'
-                              : 'معطل: فعّله لعرض الصلاة القادمة والعد التنازلي بشكل ثابت',
-                          style: TextStyle(fontSize: 11, color: secondaryTxt),
-                        ),
-                        value: isFixedEnabled,
-                        onChanged: (val) async {
-                          await _notif.requestPermissions();
-                          await _notif.setFixedPrayerNotifEnabled(val);
-                          if (!mounted) return;
-                          setState(() => _fixedNotifEnabled = val);
-                          ScaffoldMessenger.of(context)
-                            ..hideCurrentSnackBar()
-                            ..showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  val
-                                      ? 'تم تفعيل الإشعار الثابت للصلاة القادمة'
-                                      : 'تم إيقاف الإشعار الثابت للصلاة القادمة',
-                                ),
-                              ),
-                            );
-                        },
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.notifications_active_outlined, color: AppConstants.secondary),
+                    title: Text(
+                      tr('إعدادات الإشعارات الشاملة', 'All Notification Settings'),
+                      style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 13, color: primaryTxt),
+                    ),
+                    subtitle: Text(
+                      tr('تم تجميع إعدادات الإشعار الثابت وتنبيهات الصلوات في الإعدادات', 'Manage sticky prayer bar and all prayer alerts in Settings'),
+                      style: TextStyle(fontSize: 11, color: secondaryTxt),
+                    ),
+                    trailing: Icon(Icons.chevron_right, color: secondaryTxt),
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NotificationSettingsScreen()),
                       );
+                      await _loadPrefs();
                     },
                   ),
 

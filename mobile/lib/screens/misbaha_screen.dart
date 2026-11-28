@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
+import '../core/utils/app_locale.dart';
 import '../models/models.dart';
 import '../services/supabase_service.dart';
 import '../widgets/dhikr_info_actions.dart';
@@ -239,13 +240,13 @@ class MisbahaScreenState extends State<MisbahaScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('المسبحة والأذكار', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(AppLocale.instance.tr('المسبحة والأذكار', 'Tasbih & Adhkar'), style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _reset,
-            tooltip: 'إعادة العداد',
+            tooltip: AppLocale.instance.tr('إعادة العداد', 'Reset Counter'),
           ),
         ],
       ),

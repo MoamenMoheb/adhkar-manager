@@ -2,12 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'daily_worship_screen.dart';
 import 'prayer_times_screen.dart';
+import 'qibla_screen.dart';
 import 'adhkar_library_screen.dart';
 import 'misbaha_screen.dart';
-import 'leaderboard_screen.dart';
-import 'profile_screen.dart';
-import 'qibla_screen.dart';
+import 'settings_screen.dart';
 import '../core/constants/constants.dart';
+import '../core/utils/app_locale.dart';
 import '../main.dart';
 import '../services/notification_service.dart';
 import '../services/azan_audio_service.dart';
@@ -24,15 +24,6 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   int _currentIndex = 0;
   final GlobalKey<MisbahaScreenState> _misbahaKey = GlobalKey<MisbahaScreenState>();
   StreamSubscription<String>? _notifSub;
-
-  late final List<Widget> _screens = [
-    const DailyWorshipScreen(),
-    const PrayerTimesScreen(),
-    const AdhkarLibraryScreen(),
-    MisbahaScreen(key: _misbahaKey),
-    const LeaderboardScreen(),
-    const ProfileScreen(),
-  ];
 
   @override
   void initState() {
@@ -74,24 +65,18 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
 
   Future<void> _handleNotificationPayload(String payload) async {
     if (!mounted) return;
-    // Pop any pushed sub-routes (e.g., HijriCalendarScreen, AuthScreen) back to MainShell
     rootNavigatorKey.currentState?.popUntil((route) => route.isFirst);
 
     if (payload == 'misbaha:morning' || payload == 'misbaha:evening') {
       final mode = payload.split(':').last;
-      setState(() => _currentIndex = 3);
-      // Ensure MisbahaScreen state switches mode immediately
+      setState(() => _currentIndex = 4);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _misbahaKey.currentState?.openFromNotification(mode);
       });
     } else if (payload == 'open:prayers') {
       setState(() => _currentIndex = 1);
     } else if (payload == 'open:qibla') {
-      setState(() => _currentIndex = 1);
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const QiblaScreen()),
-      );
+      setState(() => _currentIndex = 2);
     } else if (payload.startsWith('prayer:')) {
       final key = payload.substring('prayer:'.length);
       setState(() => _currentIndex = 1);
@@ -113,11 +98,21 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final activeIconColor = AppConstants.accent(context);
     final inactiveIconColor = AppConstants.textSecondary(context);
+    final tr = AppLocale.instance.tr;
+
+    final List<Widget> screens = [
+      const DailyWorshipScreen(),
+      const PrayerTimesScreen(),
+      QiblaScreen(isActive: _currentIndex == 2),
+      const AdhkarLibraryScreen(),
+      MisbahaScreen(key: _misbahaKey),
+      const SettingsScreen(),
+    ];
 
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
@@ -131,32 +126,32 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
           NavigationDestination(
             icon: Icon(Icons.task_alt_outlined, color: inactiveIconColor),
             selectedIcon: Icon(Icons.task_alt, color: activeIconColor),
-            label: 'الورد',
+            label: tr('الورد', 'Worship'),
           ),
           NavigationDestination(
             icon: Icon(Icons.mosque_outlined, color: inactiveIconColor),
             selectedIcon: Icon(Icons.mosque, color: activeIconColor),
-            label: 'الأذان',
+            label: tr('الأذان', 'Azan'),
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.explore_outlined, color: inactiveIconColor),
+            selectedIcon: Icon(Icons.explore, color: activeIconColor),
+            label: tr('القبلة', 'Qibla'),
           ),
           NavigationDestination(
             icon: Icon(Icons.menu_book_outlined, color: inactiveIconColor),
             selectedIcon: Icon(Icons.menu_book, color: activeIconColor),
-            label: 'الأذكار',
+            label: tr('الأذكار', 'Adhkar'),
           ),
           NavigationDestination(
             icon: Icon(Icons.touch_app_outlined, color: inactiveIconColor),
             selectedIcon: Icon(Icons.touch_app, color: activeIconColor),
-            label: 'المسبحة',
+            label: tr('المسبحة', 'Tasbih'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.emoji_events_outlined, color: inactiveIconColor),
-            selectedIcon: Icon(Icons.emoji_events, color: activeIconColor),
-            label: 'المتصدرون',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline, color: inactiveIconColor),
-            selectedIcon: Icon(Icons.person, color: activeIconColor),
-            label: 'حسابي',
+            icon: Icon(Icons.settings_outlined, color: inactiveIconColor),
+            selectedIcon: Icon(Icons.settings, color: activeIconColor),
+            label: tr('الإعدادات', 'Settings'),
           ),
         ],
       ),

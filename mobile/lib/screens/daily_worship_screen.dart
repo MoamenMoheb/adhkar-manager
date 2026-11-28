@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
+import '../core/utils/app_locale.dart';
 import '../core/utils/hijri_calendar.dart';
 import '../services/notification_service.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
+import 'friends_screen.dart';
 import 'hijri_calendar_screen.dart';
-import 'qibla_screen.dart';
+import 'leaderboard_screen.dart';
 
 class DailyWorshipScreen extends StatefulWidget {
   const DailyWorshipScreen({super.key});
@@ -20,6 +22,7 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
   final NotificationService _notifService = NotificationService.instance;
   Map<String, bool> _todayStatus = {};
   int _hijriOffset = 0;
+  int _activeTab = 0; // 0 = Daily Worship, 1 = Dashboard (Leaderboard)
   bool _loading = true;
 
   @override
@@ -90,38 +93,101 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
 
     final primaryTxt = AppConstants.textPrimary(context);
     final secondaryTxt = AppConstants.textSecondary(context);
+    final tr = AppLocale.instance.tr;
+    final activeBg = AppConstants.accentBg(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('الورد اليومي', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(
+          _activeTab == 0
+              ? tr('الورد اليومي', 'Daily Worship')
+              : tr('لوحة المتصدرين', 'Dashboard'),
+          style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.explore_outlined),
-            tooltip: 'اتجاه القبلة',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const QiblaScreen()),
+          if (_activeTab == 1)
+            IconButton(
+              icon: const Icon(Icons.group_add),
+              tooltip: tr('الأصدقاء وطلبات الصداقة', 'Friends & Requests'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FriendsScreen()),
+                );
+              },
             ),
-          ),
           IconButton(
             icon: const Icon(Icons.calendar_month),
-            tooltip: 'التقويم الهجري وتنبيهات الصيام',
+            tooltip: tr('التقويم الهجري وتنبيهات الصيام', 'Hijri Calendar'),
             onPressed: _openHijriCalendar,
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadStatus,
-          ),
+          if (_activeTab == 0)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadStatus,
+            ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadStatus,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
+      body: Column(
+        children: [
+          // Top segment switcher: Daily Worship | Dashboard
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ChoiceChip(
+                    label: Center(
+                      child: Text(
+                        tr('الورد اليومي', 'Daily Worship'),
+                        style: TextStyle(
+                          color: _activeTab == 0 ? Colors.white : secondaryTxt,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    selected: _activeTab == 0,
+                    selectedColor: activeBg,
+                    backgroundColor: AppConstants.cardSurface(context),
+                    side: BorderSide(color: AppConstants.borderColor(context)),
+                    onSelected: (_) => setState(() => _activeTab = 0),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ChoiceChip(
+                    label: Center(
+                      child: Text(
+                        tr('لوحة المتصدرين', 'Dashboard'),
+                        style: TextStyle(
+                          color: _activeTab == 1 ? Colors.white : secondaryTxt,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    selected: _activeTab == 1,
+                    selectedColor: activeBg,
+                    backgroundColor: AppConstants.cardSurface(context),
+                    side: BorderSide(color: AppConstants.borderColor(context)),
+                    onSelected: (_) => setState(() => _activeTab = 1),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _activeTab == 1
+                ? const LeaderboardScreen(embedded: true)
+                : (_loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : RefreshIndicator(
+                        onRefresh: _loadStatus,
+                        child: ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: [
                   // Hijri Date Strip
                   InkWell(
                     onTap: _openHijriCalendar,
@@ -309,6 +375,9 @@ class _DailyWorshipScreenState extends State<DailyWorshipScreen> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
     );
   }
 }

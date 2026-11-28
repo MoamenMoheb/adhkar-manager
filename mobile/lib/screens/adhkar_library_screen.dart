@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/supabase_service.dart';
 import '../models/models.dart';
 import '../core/constants/constants.dart';
+import '../core/utils/app_locale.dart';
 import '../widgets/dhikr_info_actions.dart';
 
 class AdhkarLibraryScreen extends StatefulWidget {
@@ -82,7 +83,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('مكتبة الأذكار والأحاديث', style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
+        title: Text(AppLocale.instance.tr('مكتبة الأذكار والأحاديث', 'Adhkar & Hadith Library'), style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -97,7 +98,7 @@ class _AdhkarLibraryScreenState extends State<AdhkarLibraryScreen> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
             child: TextField(
               decoration: InputDecoration(
-                hintText: 'ابحث في متن الذكر أو فضله أو الحديث...',
+                hintText: AppLocale.instance.tr('ابحث في متن الذكر أو فضله أو الحديث...', 'Search dhikr, virtue, or hadith...'),
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: AppConstants.cardSurface(context),

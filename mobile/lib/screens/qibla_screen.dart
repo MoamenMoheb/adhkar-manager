@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/constants/constants.dart';
+import '../core/utils/app_locale.dart';
 import '../core/utils/qibla_calculator.dart';
 
 class QiblaScreen extends StatefulWidget {
-  const QiblaScreen({super.key});
+  final bool isActive;
+
+  const QiblaScreen({super.key, this.isActive = true});
 
   @override
   State<QiblaScreen> createState() => _QiblaScreenState();
@@ -43,8 +46,22 @@ class _QiblaScreenState extends State<QiblaScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkPermissionAndFetch();
-    _startCompassStream();
+    if (widget.isActive) {
+      _checkPermissionAndFetch();
+      _startCompassStream();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant QiblaScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _checkPermissionAndFetch(autoRequest: !_permissionChecked);
+      _startCompassStream();
+    } else if (!widget.isActive && oldWidget.isActive) {
+      _compassSub?.cancel();
+      _compassSub = null;
+    }
   }
 
   @override
@@ -56,8 +73,9 @@ class _QiblaScreenState extends State<QiblaScreen> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!widget.isActive) return;
     // Re-check permission and GPS automatically if user returns from App Settings
-    if (state == AppLifecycleState.resumed && (!_hasLocationPermission || !_hasGpsFix)) {
+    if (state == AppLifecycleState.resumed) {
       _checkPermissionAndFetch(autoRequest: false);
     }
   }
@@ -144,6 +162,7 @@ class _QiblaScreenState extends State<QiblaScreen> with WidgetsBindingObserver {
   }
 
   void _startCompassStream() {
+    _compassSub?.cancel();
     _compassSub = _compassEvents.receiveBroadcastStream().listen(
       (event) {
         if (!mounted || event is! Map) return;
@@ -393,6 +412,7 @@ class _QiblaScreenState extends State<QiblaScreen> with WidgetsBindingObserver {
     final primaryTxt = AppConstants.textPrimary(context);
     final secondaryTxt = AppConstants.textSecondary(context);
     final accentEmerald = isDark ? const Color(0xFF10B981) : AppConstants.secondary;
+    final tr = AppLocale.instance.tr;
 
     Widget bodyContent;
     if (!_permissionChecked || (_fetchingGps && !_hasLocationPermission)) {
@@ -669,7 +689,7 @@ class _QiblaScreenState extends State<QiblaScreen> with WidgetsBindingObserver {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'اتجاه القبلة',
+          tr('اتجاه القبلة', 'Qibla'),
           style: GoogleFonts.ibmPlexSansArabic(fontWeight: FontWeight.bold, fontSize: 18),
         ),
         centerTitle: true,
@@ -683,12 +703,12 @@ class _QiblaScreenState extends State<QiblaScreen> with WidgetsBindingObserver {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.my_location),
-              tooltip: 'تحديث الموقع عبر GPS',
+              tooltip: tr('تحديث الموقع عبر GPS', 'Refresh GPS Location'),
               onPressed: _fetchingGps ? null : _refreshGpsLocation,
             ),
           IconButton(
             icon: const Icon(Icons.help_outline),
-            tooltip: 'معايرة البوصلة',
+            tooltip: tr('معايرة البوصلة', 'Calibrate Compass'),
             onPressed: _showCalibrationSheet,
           ),
         ],

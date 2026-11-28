@@ -2,6 +2,8 @@ package com.moamenmoheb.adhkar_sanctuary
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -29,7 +31,9 @@ class MainActivity : FlutterActivity() {
     private val locationChannelName = "com.moamenmoheb.adhkar_sanctuary/qibla_location"
     private val azanOverlayChannelName = "com.moamenmoheb.adhkar_sanctuary/azan_overlay"
     private val azanPlayerChannelName = "com.moamenmoheb.adhkar_sanctuary/azan_player"
+    private val appPermissionsChannelName = "com.moamenmoheb.adhkar_sanctuary/app_permissions"
     private val locationPermCode = 9012
+    private val notifPermCode = 9013
 
     private var stickyChannel: MethodChannel? = null
     private var azanPlayerChannel: MethodChannel? = null
@@ -226,6 +230,130 @@ class MainActivity : FlutterActivity() {
                 "getCurrentLocation" -> handleGetCurrentLocation(result)
                 else -> result.notImplemented()
             }
+        }
+
+        MethodChannel(messenger, appPermissionsChannelName).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getPermissionsStatus" -> {
+                    val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    val notifPostOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    } else {
+                        true
+                    }
+                    val notifOk = notifPostOk && nm.areNotificationsEnabled()
+                    val locOk = hasLocationPermission()
+                    val overlayOk = AzanOverlayHelper.canDrawOverlays(this)
+                    val exactOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        (getSystemService(Context.ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms()
+                    } else {
+                        true
+                    }
+                    result.success(
+                        mapOf(
+                            "notifications" to notifOk,
+                            "location" to locOk,
+                            "overlay" to overlayOk,
+                            "exactAlarms" to exactOk
+                        )
+                    )
+                }
+                "requestNotifications" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), notifPermCode)
+                        result.success(true)
+                    } else {
+                        openNotificationSettingsIntent()
+                        result.success(true)
+                    }
+                }
+                "openNotificationSettings" -> {
+                    openNotificationSettingsIntent()
+                    result.success(true)
+                }
+                "requestLocation" -> {
+                    if (!hasLocationPermission() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        requestPermissions(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ),
+                            locationPermCode
+                        )
+                        result.success(true)
+                    } else {
+                        openAppDetailsIntent()
+                        result.success(true)
+                    }
+                }
+                "openAppDetails" -> {
+                    openAppDetailsIntent()
+                    result.success(true)
+                }
+                "openOverlaySettings" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        try {
+                            startActivity(
+                                Intent(
+                                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                    Uri.fromParts("package", packageName, null)
+                                )
+                            )
+                        } catch (_: Exception) {
+                            openAppDetailsIntent()
+                        }
+                    }
+                    result.success(true)
+                }
+                "openExactAlarmSettings" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        try {
+                            startActivity(
+                                Intent(
+                                    Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                    Uri.fromParts("package", packageName, null)
+                                )
+                            )
+                        } catch (_: Exception) {
+                            openAppDetailsIntent()
+                        }
+                    }
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun openNotificationSettingsIntent() {
+        try {
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                }
+            } else {
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", packageName, null)
+                )
+            }
+            startActivity(intent)
+        } catch (_: Exception) {
+            openAppDetailsIntent()
+        }
+    }
+
+    private fun openAppDetailsIntent() {
+        try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", packageName, null)
+                )
+            )
+        } catch (_: Exception) {
         }
     }
 
