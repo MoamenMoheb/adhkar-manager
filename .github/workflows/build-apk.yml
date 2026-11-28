@@ -147,19 +147,21 @@ jobs:
           VERSION_NAME="1.0.${{ github.run_number }}"
           BUILD_NUM="${{ github.run_number }}"
           echo "APP_VERSION=$VERSION_NAME" >> $GITHUB_ENV
-          flutter build apk --release --build-name="$VERSION_NAME" --build-number="$BUILD_NUM"
+          flutter build apk --release --split-per-abi --build-name="$VERSION_NAME" --build-number="$BUILD_NUM"
 
       - name: Prepare APK Output
         run: |
           mkdir -p dist
-          cp mobile/build/app/outputs/flutter-apk/app-release.apk "dist/adhkar-sanctuary-v${APP_VERSION}.apk"
+          cp mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "dist/adhkar-sanctuary-v${APP_VERSION}-arm64-v8a.apk"
+          cp mobile/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "dist/adhkar-sanctuary-v${APP_VERSION}-armeabi-v7a.apk"
+          cp mobile/build/app/outputs/flutter-apk/app-x86_64-release.apk "dist/adhkar-sanctuary-v${APP_VERSION}-x86_64.apk"
           ls -lh dist/
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: adhkar-sanctuary-apk
-          path: "dist/adhkar-sanctuary-v${{ env.APP_VERSION }}.apk"
+          path: "dist/*.apk"
           retention-days: 30
 
       - name: Publish GitHub Release
@@ -169,7 +171,10 @@ jobs:
           TAG_NAME="v${APP_VERSION}"
           gh release delete "$TAG_NAME" --yes || true
           git tag -d "$TAG_NAME" || true
-          gh release create "$TAG_NAME" "dist/adhkar-sanctuary-v${APP_VERSION}.apk" \
+          gh release create "$TAG_NAME" \
+            "dist/adhkar-sanctuary-v${APP_VERSION}-arm64-v8a.apk" \
+            "dist/adhkar-sanctuary-v${APP_VERSION}-armeabi-v7a.apk" \
+            "dist/adhkar-sanctuary-v${APP_VERSION}-x86_64.apk" \
             --title "تطبيق أذكار - الإصدار ${APP_VERSION} (Adhkar Sanctuary APK)" \
-            --notes "تطبيق أذكار الهادئ - الإصدار ${APP_VERSION} (بناء #${{ github.run_number }}). يدعم التحديث المباشر من داخل التطبيق، مواقيت الصلاة والأذان بصوت الحرم المكي، التقويم الهجري وتنبيهات الصيام، وأذكار الصباح والمساء." \
+            --notes "تطبيق أذكار الهادئ - الإصدار ${APP_VERSION} (بناء #${{ github.run_number }}). نسخة مقسّمة حسب معمارية المعالج (arm64-v8a / armeabi-v7a / x86_64) لتقليل حجم التحميل والتحديث." \
             --latest

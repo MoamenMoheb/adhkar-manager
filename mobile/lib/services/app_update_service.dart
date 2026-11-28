@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
@@ -30,6 +31,16 @@ class AppUpdateService {
 
   static const String _latestReleaseApi =
       'https://api.github.com/repos/MoamenMoheb/adhkar-manager/releases/latest';
+  static const MethodChannel _stickyChannel =
+      MethodChannel('com.moamenmoheb.adhkar_sanctuary/sticky_prayer');
+
+  Future<List<String>> _getDeviceAbis() async {
+    try {
+      final list = await _stickyChannel.invokeListMethod<String>('getSupportedAbis');
+      if (list != null && list.isNotEmpty) return list;
+    } catch (_) {}
+    return const ['arm64-v8a', 'armeabi-v7a'];
+  }
 
   bool _checkedThisSession = false;
 
@@ -84,15 +95,25 @@ class AppUpdateService {
       }
 
       final assets = (data['assets'] as List<dynamic>? ?? []);
+      final apkAssets = assets
+          .whereType<Map<String, dynamic>>()
+          .where((a) => (a['name'] ?? '').toString().toLowerCase().endsWith('.apk'))
+          .toList();
+      if (apkAssets.isEmpty) return null;
+
+      final abis = await _getDeviceAbis();
       Map<String, dynamic>? apkAsset;
-      for (final a in assets) {
-        final name = (a['name'] ?? '').toString().toLowerCase();
-        if (name.endsWith('.apk')) {
-          apkAsset = a as Map<String, dynamic>;
-          break;
+      for (final abi in abis) {
+        final marker = '-${abi.toLowerCase()}.apk';
+        for (final a in apkAssets) {
+          if ((a['name'] ?? '').toString().toLowerCase().endsWith(marker)) {
+            apkAsset = a;
+            break;
+          }
         }
+        if (apkAsset != null) break;
       }
-      if (apkAsset == null) return null;
+      apkAsset ??= apkAssets.first;
 
       final downloadUrl = (apkAsset['browser_download_url'] ?? '').toString();
       if (downloadUrl.isEmpty) return null;

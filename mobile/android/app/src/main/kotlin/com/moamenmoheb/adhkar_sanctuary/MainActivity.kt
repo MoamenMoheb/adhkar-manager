@@ -67,6 +67,9 @@ class MainActivity : FlutterActivity() {
                     pendingLaunchTab = null
                     result.success(tab)
                 }
+                "getSupportedAbis" -> {
+                    result.success(Build.SUPPORTED_ABIS.toList())
+                }
                 else -> result.notImplemented()
             }
         }
